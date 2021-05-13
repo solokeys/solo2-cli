@@ -1067,8 +1067,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe0f37c9e8f3c5a4a66ad655a93c74daac4ad00c441533bf5c6e7990bb42604e"
 
 [[package]]
-name = "solo2-cli"
-version = "0.0.0-unreleased"
+name = "solo2"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "clap",

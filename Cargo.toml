@@ -1,12 +1,14 @@
 [package]
-name = "solo2-cli"
-version = "0.0.0-unreleased"
+name = "solo2"
+version = "0.0.1"
 authors = ["SoloKeys Developers"]
 edition = "2018"
+repository = "https://github.com/solokeys/solo2-cli"
+license = "Apache-2.0 OR MIT"
+readme = "README.md"
+documentation = "https://docs.rs/solo2"
 
 [lib]
-name = "solo2"
-path = "src/lib.rs"
 
 [[bin]]
 name = "solo2"
