@@ -24,7 +24,28 @@ pub fn cli() -> clap::App<'static, 'static> {
             SubCommand::with_name("app")
                 .about("app interactions")
                 .setting(clap::AppSettings::SubcommandRequiredElseHelp)
-                .subcommand(SubCommand::with_name("management").about("management app")),
+                .subcommand(
+                    SubCommand::with_name("management")
+                    .about("management app")
+                    .setting(clap::AppSettings::SubcommandRequiredElseHelp)
+                    .subcommand(
+                        SubCommand::with_name("reboot")
+                            .about("reboot device to regular mode")
+                    )
+                    .subcommand(
+                        SubCommand::with_name("boot-to-bootrom")
+                            .about("reboot device to bootloader mode")
+                    )
+                    .subcommand(
+                        SubCommand::with_name("uuid")
+                            .about("UUID (serial number)")
+                    )
+                    .subcommand(
+                        SubCommand::with_name("version")
+                            .about("version")
+                    )
+                ),
+
         )
         // inherited from lpc55-host
         .subcommand(
@@ -39,11 +60,22 @@ pub fn cli() -> clap::App<'static, 'static> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("reboot")
-                .version(crate_version!())
-                .long_version(LONG_VERSION.as_str())
-                .about("reboot device"),
-        );
+            SubCommand::with_name("bootloader")
+                .about("Interact with bootloader")
+                .setting(clap::AppSettings::SubcommandRequiredElseHelp)
+                .subcommand(
+                    SubCommand::with_name("reboot")
+                        .about("reboot (into device if firmware is valid)"),
+                )
+        )
+        // .subcommand(
+        //     SubCommand::with_name("reboot")
+        //         .version(crate_version!())
+        //         .long_version(LONG_VERSION.as_str())
+        //         .about("reboot device"),
+        // )
+
+    ;
 
     cli
 }
