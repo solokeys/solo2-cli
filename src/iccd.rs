@@ -33,6 +33,8 @@ impl Card {
             send_buffer.push(data.len() as u8);
             send_buffer.extend_from_slice(data);
         }
+        // Le = 256
+        send_buffer.push(0);
 
         let mut recv_buffer = Vec::<u8>::with_capacity(3072);
         recv_buffer.resize(3072, 0);
@@ -41,19 +43,25 @@ impl Card {
         recv_buffer.resize(l, 0);
 
         if l < 2 {
-            return Err(anyhow::anyhow!("response should end with two status bytes! received {}", hex::encode(recv_buffer)));
+            return Err(anyhow::anyhow!(
+                "response should end with two status bytes! received {}",
+                hex::encode(recv_buffer)
+            ));
         }
         let sw2 = recv_buffer.pop().unwrap();
         let sw1 = recv_buffer.pop().unwrap();
 
         if (sw1, sw2) != (0x90, 0x00) {
-            return Err(
-                if recv_buffer.len() > 0 {
-                    anyhow::anyhow!("card signaled error ({:X}, {:X}) with data {}", sw1, sw2, hex::encode(recv_buffer))
-                } else {
-                    anyhow::anyhow!("card signaled error: ({:X}, {:X})", sw1, sw2)
-                }
-            );
+            return Err(if recv_buffer.len() > 0 {
+                anyhow::anyhow!(
+                    "card signaled error ({:X}, {:X}) with data {}",
+                    sw1,
+                    sw2,
+                    hex::encode(recv_buffer)
+                )
+            } else {
+                anyhow::anyhow!("card signaled error: ({:X}, {:X})", sw1, sw2)
+            });
         }
 
         Ok(recv_buffer)

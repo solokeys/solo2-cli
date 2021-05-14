@@ -4,10 +4,13 @@ use crate::{Card, Result};
 use pcsc::{Context, Protocols, Scope, ShareMode};
 
 pub mod management;
+pub mod ndef;
 
+pub const NFC_FORUM_RID: &'static [u8] = &hex!("D276000085");
 pub const SOLOKEYS_RID: &'static [u8] = &hex!("A000000847");
 
 pub const MANAGEMENT_PIX: &'static [u8] = &hex!("00000001");
+pub const NDEF_PIX: &'static [u8] = &hex!("010100");
 pub const TESTER_PIX: &'static [u8] = &hex!("01000000");
 pub const PROVISIONER_PIX: &'static [u8] = &hex!("01000001");
 
