@@ -4,6 +4,7 @@ version = "0.0.1"
 authors = ["SoloKeys Developers"]
 edition = "2018"
 repository = "https://github.com/solokeys/solo2-cli"
+description = "Library and CLI for the SoloKeys Solo 2 security key"
 license = "Apache-2.0 OR MIT"
 readme = "README.md"
 documentation = "https://docs.rs/solo2"
@@ -17,15 +18,14 @@ required-features = ["cli"]
 [dependencies]
 log = "0.4.14"
 anyhow = "1.0.40"
-clap = "2.33.3"
+clap = { version = "2.33.3", optional = true }
 hex = "0.4.3"
 hex-literal = "0.3.1"
-iso7816 = { git = "https://github.com/ycrypto/iso7816", branch = "main" }
-lazy_static = "1.4.0"
-# lpc55 = "0.1.0-alpha.1"
-lpc55 = { git = "https://github.com/lpc55/lpc55-host", branch = "main" }
+iso7816 = "0.1.0-alpha.0"
+lazy_static = { version = "1.4.0", optional = true }
+lpc55 = "0.1.0-alpha.2"
 pcsc = "2.4.0"
 pretty_env_logger = { version = "0.4.0", optional = true }
 
 [features]
-cli = ["pretty_env_logger"]
+cli = ["clap", "lazy_static", "pretty_env_logger"]

@@ -1,3 +1,6 @@
+use core::convert::TryInto;
+use iso7816::Status;
+
 pub struct Card {
     card: pcsc::Card,
 }
@@ -51,16 +54,18 @@ impl Card {
         let sw2 = recv_buffer.pop().unwrap();
         let sw1 = recv_buffer.pop().unwrap();
 
-        if (sw1, sw2) != (0x90, 0x00) {
+        let status = (sw1, sw2).try_into();
+        if Ok(Status::Success) != status {
             return Err(if recv_buffer.len() > 0 {
                 anyhow::anyhow!(
-                    "card signaled error ({:X}, {:X}) with data {}",
+                    "card signaled error {:?} ({:X}, {:X}) with data {}",
+                    status,
                     sw1,
                     sw2,
                     hex::encode(recv_buffer)
                 )
             } else {
-                anyhow::anyhow!("card signaled error: ({:X}, {:X})", sw1, sw2)
+                anyhow::anyhow!("card signaled error: {:?} ({:X}, {:X})", status, sw1, sw2)
             });
         }
 

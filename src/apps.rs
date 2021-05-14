@@ -49,6 +49,9 @@ pub trait App: Sized {
 
         let readers = context.list_readers(&mut buffer)?.collect::<Vec<_>>();
         // TODO: select (by UUID)
+        if readers.len() != 1 {
+            return Err(anyhow::anyhow!("PCSC reader not unique"));
+        }
         let reader = readers[0];
 
         info!("connecting with reader: `{}`", &reader.to_string_lossy());
