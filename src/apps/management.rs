@@ -1,5 +1,6 @@
 use core::convert::TryInto;
 
+use super::App as _;
 use crate::{Card, Result};
 
 pub struct App {
@@ -27,9 +28,6 @@ impl App {
     const VERSION_COMMAND: u8 = 0x61;
     const UUID_COMMAND: u8 = 0x62;
 
-    fn call(&mut self, command: u8) -> Result<Vec<u8>> {
-        self.card.call(0, command, 0x00, 0x00, None)
-    }
     pub fn boot_to_bootrom(&mut self) -> Result<()> {
         self.call(Self::BOOT_TO_BOOTROM_COMMAND).map(drop)
     }

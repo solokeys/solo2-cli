@@ -23,10 +23,15 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     if let Some(args) = args.subcommand_matches("app") {
         use solo2::apps::App;
 
-        if let Some(args) = args.subcommand_matches("management") {
+        if let Some(args) = args.subcommand_matches("mgmt") {
             info!("interacting with management app");
+            use solo2::apps::management::App as ManagementApp;
+            if args.subcommand_matches("aid").is_some() {
+                println!("{}", hex::encode(ManagementApp::aid()).to_uppercase());
+                return Ok(());
+            }
 
-            let mut app = solo2::apps::management::App::new()?;
+            let mut app = ManagementApp::new()?;
             let answer_to_select = app.select()?;
             info!("answer to select: {}", &hex::encode(answer_to_select));
 
@@ -39,7 +44,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             }
             if args.subcommand_matches("uuid").is_some() {
                 let uuid = app.uuid()?;
-                println!("{}", hex::encode(uuid.to_le_bytes()));
+                println!("{}", hex::encode_upper(uuid.to_be_bytes()));
             }
             if args.subcommand_matches("version").is_some() {
                 let version = app.version()?;
@@ -49,8 +54,15 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
         if let Some(args) = args.subcommand_matches("ndef") {
             info!("interacting with NDEF app");
-            let mut app = solo2::apps::ndef::App::new()?;
+            use solo2::apps::ndef::App as NdefApp;
+            if args.subcommand_matches("aid").is_some() {
+                println!("{}", hex::encode(NdefApp::aid()).to_uppercase());
+                return Ok(());
+            }
+
+            let mut app = NdefApp::new()?;
             app.select()?;
+
             if args.subcommand_matches("capabilities").is_some() {
                 let capabilities = app.capabilities()?;
                 println!("{}", hex::encode(capabilities));
@@ -60,16 +72,101 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 println!("{}", hex::encode(data));
             }
         }
+
+        if let Some(args) = args.subcommand_matches("piv") {
+            info!("interacting with PIV app");
+            use solo2::apps::piv::App;
+            if args.subcommand_matches("aid").is_some() {
+                println!("{}", hex::encode(App::aid()).to_uppercase());
+                return Ok(());
+            }
+
+            let mut app = App::new()?;
+            app.select()?;
+        }
+
+        if let Some(args) = args.subcommand_matches("provisioner") {
+            info!("interacting with Provisioner app");
+            use solo2::apps::provisioner::App;
+            if args.subcommand_matches("aid").is_some() {
+                println!("{}", hex::encode(App::aid()).to_uppercase());
+                return Ok(());
+            }
+
+            let mut app = App::new()?;
+            app.select()?;
+
+            if args.subcommand_matches("generate-ed255-key").is_some() {
+                let public_key = app.generate_trussed_ed255_attestation_key()?;
+                println!("{}", hex::encode(public_key));
+            }
+            if args.subcommand_matches("generate-p256-key").is_some() {
+                let public_key = app.generate_trussed_p256_attestation_key()?;
+                println!("{}", hex::encode(public_key));
+            }
+            if args.subcommand_matches("reformat-filesystem").is_some() {
+                app.reformat_filesystem()?;
+            }
+            if let Some(args) = args.subcommand_matches("store-ed255-cert") {
+                let cert_file = args.value_of("DER").unwrap();
+                let certificate = std::fs::read(cert_file)?;
+                app.store_trussed_ed255_attestation_certificate(&certificate)?;
+            }
+            if let Some(args) = args.subcommand_matches("store-p256-cert") {
+                let cert_file = args.value_of("DER").unwrap();
+                let certificate = std::fs::read(cert_file)?;
+                app.store_trussed_p256_attestation_certificate(&certificate)?;
+            }
+            if args.subcommand_matches("uuid").is_some() {
+                let uuid = app.uuid()?;
+                println!("{}", hex::encode_upper(uuid.to_be_bytes()));
+            }
+            if let Some(args) = args.subcommand_matches("write-file") {
+                let file = args.value_of("DATA").unwrap();
+                let data = std::fs::read(file)?;
+                let path = args.value_of("PATH").unwrap();
+                app.write_file(&data, &path)?;
+            }
+        }
+
+        if let Some(args) = args.subcommand_matches("tester") {
+            info!("interacting with Tester app");
+            use solo2::apps::tester::App;
+            if args.subcommand_matches("aid").is_some() {
+                println!("{}", hex::encode(App::aid()).to_uppercase());
+                return Ok(());
+            }
+
+            let mut app = App::new()?;
+            app.select()?;
+        }
     }
 
-    let bootloader = || {
-        Bootloader::try_find(None, None, None).ok_or(anyhow!("Could not attach to a bootloader"))
-    };
+    // if let Some(args) = args.subcommand_matches("dev-pki") {
+    //     if let Some(args) = args.subcommand_matches("fido") {
+    //         todo!();
+    //         // let with_nfc = args.is_present("with-nfc");
+    //         // info!("{}", with_nfc);
+    //         // let cert = solo2::dev_pki::generate_selfsigned_fido(with_nfc);
+    //         // println!("{}", cert.serialize_pem()?);
+    //     }
+    // }
 
     if let Some(args) = args.subcommand_matches("bootloader") {
+        let bootloader = || {
+            Bootloader::try_find(None, None, None)
+                .ok_or(anyhow!("Could not attach to a bootloader"))
+        };
+
         if args.subcommand_matches("reboot").is_some() {
             let bootloader = bootloader()?;
             bootloader.reboot();
+        }
+        if args.subcommand_matches("ls").is_some() {
+            let bootloaders = Bootloader::list();
+            for bootloader in bootloaders {
+                println!("{:?}", &bootloader);
+            }
         }
     }
 

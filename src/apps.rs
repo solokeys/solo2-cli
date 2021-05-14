@@ -5,14 +5,22 @@ use pcsc::{Context, Protocols, Scope, ShareMode};
 
 pub mod management;
 pub mod ndef;
+pub mod piv;
+pub mod provisioner;
+pub mod tester;
 
 pub const NFC_FORUM_RID: &'static [u8] = &hex!("D276000085");
+pub const NIST_RID: &'static [u8] = &hex!("A000000308");
 pub const SOLOKEYS_RID: &'static [u8] = &hex!("A000000847");
 
 pub const MANAGEMENT_PIX: &'static [u8] = &hex!("00000001");
 pub const NDEF_PIX: &'static [u8] = &hex!("010100");
-pub const TESTER_PIX: &'static [u8] = &hex!("01000000");
+// the full PIX ends with 0100 for version 01.00,
+// truncated is enough to select
+// pub const PIV_PIX: &'static [u8] = &hex!("000010000100");
+pub const PIV_PIX: &'static [u8] = &hex!("00001000");
 pub const PROVISIONER_PIX: &'static [u8] = &hex!("01000001");
+pub const TESTER_PIX: &'static [u8] = &hex!("01000000");
 
 pub trait App: Sized {
     const RID: &'static [u8];
@@ -62,4 +70,12 @@ pub trait App: Sized {
     }
 
     fn new() -> Result<Self>;
+
+    fn call(&mut self, instruction: u8) -> Result<Vec<u8>> {
+        self.card().call(0, instruction, 0x00, 0x00, None)
+    }
+
+    fn call_with(&mut self, instruction: u8, data: &[u8]) -> Result<Vec<u8>> {
+        self.card().call(0, instruction, 0x00, 0x00, Some(&data))
+    }
 }

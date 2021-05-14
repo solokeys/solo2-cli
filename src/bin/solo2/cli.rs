@@ -27,10 +27,11 @@ pub fn cli() -> clap::App<'static, 'static> {
                 .setting(AppSettings::SubcommandRequiredElseHelp)
                 .setting(AppSettings::InferSubcommands)
                 .subcommand(
-                    SubCommand::with_name("management")
+                    SubCommand::with_name("mgmt")
                         .about("management app")
                         .setting(AppSettings::SubcommandRequiredElseHelp)
                         .setting(AppSettings::InferSubcommands)
+                        .subcommand(SubCommand::with_name("aid").about("AID"))
                         .subcommand(
                             SubCommand::with_name("reboot").about("reboot device to regular mode"),
                         )
@@ -46,12 +47,94 @@ pub fn cli() -> clap::App<'static, 'static> {
                         .about("NDEF app")
                         .setting(AppSettings::SubcommandRequiredElseHelp)
                         .setting(AppSettings::InferSubcommands)
+                        .subcommand(SubCommand::with_name("aid").about("AID"))
                         .subcommand(
                             SubCommand::with_name("capabilities").about("NDEF capabilities"),
                         )
                         .subcommand(SubCommand::with_name("data").about("NDEF data")),
+                )
+                .subcommand(
+                    SubCommand::with_name("provisioner")
+                        .about("Provisioner app")
+                        .setting(AppSettings::SubcommandRequiredElseHelp)
+                        .setting(AppSettings::InferSubcommands)
+                        .subcommand(SubCommand::with_name("aid").about("AID"))
+                        .subcommand(
+                            SubCommand::with_name("generate-ed255-key")
+                                .about("Generate Trussed Ed255 attestation key"),
+                        )
+                        .subcommand(
+                            SubCommand::with_name("generate-p256-key")
+                                .about("Generate Trussed P256 attestation key"),
+                        )
+                        .subcommand(
+                            SubCommand::with_name("store-ed255-cert")
+                                .about("Store Trussed Ed255 attestation certificate")
+                                .arg(
+                                    Arg::with_name("DER")
+                                        .help("Certificate in DER format")
+                                        .required(true),
+                                ),
+                        )
+                        .subcommand(
+                            SubCommand::with_name("store-p256-cert")
+                                .about("Store Trussed P256 attestation certificate")
+                                .arg(
+                                    Arg::with_name("DER")
+                                        .help("Certificate in DER format")
+                                        .required(true),
+                                ),
+                        )
+                        .subcommand(
+                            SubCommand::with_name("reformat-filesystem")
+                                .about("Reformat internal filesystem"),
+                        )
+                        .subcommand(SubCommand::with_name("uuid").about("UUID (serial number)"))
+                        .subcommand(
+                            SubCommand::with_name("write-file")
+                                .about("Write binary file to specified path")
+                                .arg(
+                                    Arg::with_name("DATA")
+                                        .help("binary data file")
+                                        .required(true),
+                                )
+                                .arg(
+                                    Arg::with_name("PATH")
+                                        .help("path in internal filesystem")
+                                        .required(true),
+                                ),
+                        ),
+                )
+                .subcommand(
+                    SubCommand::with_name("piv")
+                        .about("PIV (personal identity verification) app")
+                        .setting(AppSettings::SubcommandRequiredElseHelp)
+                        .setting(AppSettings::InferSubcommands)
+                        .subcommand(SubCommand::with_name("aid").about("AID")),
+                )
+                .subcommand(
+                    SubCommand::with_name("tester")
+                        .about("Tester app")
+                        .setting(AppSettings::SubcommandRequiredElseHelp)
+                        .setting(AppSettings::InferSubcommands)
+                        .subcommand(SubCommand::with_name("aid").about("AID")),
                 ),
         )
+        // // dev PKI
+        // .subcommand(
+        //     SubCommand::with_name("dev-pki")
+        //         .about("PKI for development")
+        //         .setting(AppSettings::SubcommandRequiredElseHelp)
+        //         .setting(AppSettings::InferSubcommands)
+        //         .subcommand(
+        //             SubCommand::with_name("fido")
+        //                 .about("generate a self-signed FIDO batch attestation cert+key")
+        //                 .arg(Arg::with_name("with-nfc")
+        //                      .help("Signal NFC support")
+        //                      .long("with-nfc")
+        //                  )
+        //         )
+        //     )
         // inherited from lpc55-host
         .subcommand(
             SubCommand::with_name("provision")
@@ -72,7 +155,8 @@ pub fn cli() -> clap::App<'static, 'static> {
                 .subcommand(
                     SubCommand::with_name("reboot")
                         .about("reboot (into device if firmware is valid)"),
-                ),
+                )
+                .subcommand(SubCommand::with_name("ls").about("list all available bootloaders")),
         );
 
     cli

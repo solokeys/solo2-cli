@@ -2,7 +2,8 @@
 extern crate log;
 
 pub mod apps;
+// pub mod dev_pki;
 pub mod error;
 pub use error::{Error, Result};
-pub mod iccd;
-pub use iccd::Card;
+pub mod smartcard;
+pub use smartcard::Card;

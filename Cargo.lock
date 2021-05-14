@@ -2,9 +2,9 @@
 # It is not intended for manual editing.
 [[package]]
 name = "aes"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32380222440685202b62f23002e668519a6bf2d8df5e7655ed96223b6482b4be"
+checksum = "bbda1ffd586ec58bdbc3290f9243c1d05bec1abf49ec15e4bc3d60070b7d9d11"
 dependencies = [
  "cfg-if",
  "cipher",
@@ -178,9 +178,9 @@ dependencies = [
 
 [[package]]
 name = "cpufeatures"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "281f563b2c3a0e535ab12d81d3c5859045795256ad269afa7c19542585b68f93"
+checksum = "ed00c67cb5d0a7d64a44f6ad2668db7e7530311dd53ea79bcd4fb022c64911c8"
 dependencies = [
  "libc",
 ]
@@ -682,9 +682,9 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "pcsc"
-version = "2.4.0"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88e09a8d8705a2c9b1ffe1f9dd9580efe3f8e80c19fc9f99038fe99b7bb56c83"
+checksum = "d4c82dbce82470474aa850ad01eb104c1b4b06d89ba831ab369f884a8610db18"
 dependencies = [
  "bitflags",
  "pcsc-sys",
@@ -895,9 +895,9 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb5d2a036dc6d2d8fd16fde3498b04306e29bd193bf306a57427019b823d5acd"
+checksum = "61b3909d758bb75c79f23d4736fac9433868679d3ad2ea7a61e3c25cfda9a088"
 
 [[package]]
 name = "ryu"
@@ -997,7 +997,7 @@ checksum = "fe0f37c9e8f3c5a4a66ad655a93c74daac4ad00c441533bf5c6e7990bb42604e"
 
 [[package]]
 name = "solo2"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "clap",

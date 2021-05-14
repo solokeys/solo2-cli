@@ -33,14 +33,14 @@ We recommend using NXP's [development board][dev-board] instead.
 ### Installation
 
 ```
-cargo install --features cli solo2
+cargo install solo2
 ```
 
 ### Examples
 
 If the key is in regular mode, and its firmware contains the management app:
-- `solo2 app management uuid` reads out the serial number.
-- `solo2 app management boot-to-bootrom` switches to bootloader mode.
+- `solo2 app mgmt uuid` reads out the serial number.
+- `solo2 app mgmt boot-to-bootrom` switches to bootloader mode.
 
 If the key is in regular mode, and its firmware contains the NDEF app:
 - `solo2 app ndef capabilities` reads out the NDEF capabilities.

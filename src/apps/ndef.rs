@@ -1,6 +1,6 @@
-use hex_literal::hex;
 use iso7816::Instruction;
 
+use super::App as _;
 use crate::{Card, Result};
 
 pub struct App {
@@ -23,12 +23,8 @@ impl super::App for App {
 }
 
 impl App {
-    const CAPABILITIES_PARAMETER: [u8; 2] = hex!("E103");
-    const DATA_PARAMETER: [u8; 2] = hex!("E104");
-
-    fn call_with(&mut self, command: u8, data: [u8; 2]) -> Result<Vec<u8>> {
-        self.card.call(0, command, 0x00, 0x00, Some(&data))
-    }
+    const CAPABILITIES_PARAMETER: [u8; 2] = [0xE1, 0x03];
+    const DATA_PARAMETER: [u8; 2] = [0xE1, 0x04];
 
     fn fetch(&mut self) -> Result<Vec<u8>> {
         self.card
@@ -36,13 +32,13 @@ impl App {
     }
 
     pub fn capabilities(&mut self) -> Result<Vec<u8>> {
-        self.call_with(Instruction::Select.into(), Self::CAPABILITIES_PARAMETER)
+        self.call_with(Instruction::Select.into(), &Self::CAPABILITIES_PARAMETER)
             .map(drop)?;
         self.fetch()
     }
 
     pub fn data(&mut self) -> Result<Vec<u8>> {
-        self.call_with(Instruction::Select.into(), Self::DATA_PARAMETER)
+        self.call_with(Instruction::Select.into(), &Self::DATA_PARAMETER)
             .map(drop)?;
         self.fetch()
     }
