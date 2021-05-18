@@ -3,8 +3,11 @@ extern crate log;
 
 mod cli;
 
+use core::convert::TryFrom;
+
 use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
+
 use solo2;
 
 fn main() {
@@ -70,6 +73,34 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             if args.subcommand_matches("data").is_some() {
                 let data = app.data()?;
                 println!("{}", hex::encode(data));
+            }
+        }
+
+        if let Some(args) = args.subcommand_matches("oath") {
+            info!("interacting with OATH app");
+            use solo2::apps::oath::{App, Command};
+            if args.subcommand_matches("aid").is_some() {
+                App::print_aid();
+                return Ok(());
+            }
+
+            let mut app = App::new()?;
+            app.select()?;
+
+            let command: Command = Command::try_from(args)?;
+
+            match command {
+                Command::Register(register) => {
+                    let credential_id = app.register(register)?;
+                    println!("{}", credential_id);
+                }
+                Command::Authenticate(authenticate) => {
+                    let code = app.authenticate(authenticate)?;
+                    println!("{}", code);
+                }
+                Command::Delete(label) => {
+                    app.delete(label)?;
+                }
             }
         }
 

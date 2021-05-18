@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use core::convert::TryInto;
 use iso7816::Status;
 
@@ -61,7 +62,7 @@ impl Card {
         debug!("<< {}", hex::encode(&recv_buffer));
 
         if l < 2 {
-            return Err(anyhow::anyhow!(
+            return Err(anyhow!(
                 "response should end with two status bytes! received {}",
                 hex::encode(recv_buffer)
             ));
@@ -72,7 +73,7 @@ impl Card {
         let status = (sw1, sw2).try_into();
         if Ok(Status::Success) != status {
             return Err(if recv_buffer.len() > 0 {
-                anyhow::anyhow!(
+                anyhow!(
                     "card signaled error {:?} ({:X}, {:X}) with data {}",
                     status,
                     sw1,
@@ -80,7 +81,7 @@ impl Card {
                     hex::encode(recv_buffer)
                 )
             } else {
-                anyhow::anyhow!("card signaled error: {:?} ({:X}, {:X})", status, sw1, sw2)
+                anyhow!("card signaled error: {:?} ({:X}, {:X})", status, sw1, sw2)
             });
         }
 

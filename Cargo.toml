@@ -19,11 +19,15 @@ required-features = ["cli"]
 log = "0.4.14"
 anyhow = "1.0.40"
 # ctap-hid-fido2 = "2.1.1"
+data-encoding = "2.3.2"
+flexiber = { git = "https://github.com/nickray/flexiber", branch = "main", features = ["std"] }
 hex = "0.4.3"
 hex-literal = "0.3.1"
 iso7816 = "0.1.0-alpha.0"
 lpc55 = "0.1.0-alpha.2"
 pcsc = "2.4.0"
+sha-1 = "0.9.6"
+sha2 = "0.9.5"
 
 # cli
 clap = { version = "2.33.3", optional = true }

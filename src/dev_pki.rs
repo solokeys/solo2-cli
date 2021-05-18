@@ -18,11 +18,7 @@ pub enum Kind {
     X255 = 6,
 }
 
-fn trussed_serialized_key(
-    sensitive: bool,
-    kind: Kind,
-    material: &[u8],
-) -> Vec<u8> {
+fn trussed_serialized_key(sensitive: bool, kind: Kind, material: &[u8]) -> Vec<u8> {
     let mut buffer = Vec::new();
     let mut flags = 0u16;
     // we shouldn't be in the business of injecting "local" keys
