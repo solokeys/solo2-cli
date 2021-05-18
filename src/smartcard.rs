@@ -32,18 +32,33 @@ impl Card {
         send_buffer.push(p2);
 
         // TODO: checks, chain, ...
-        if data.len() > 0 {
-            send_buffer.push(data.len() as u8);
+        let l = data.len();
+        if l > 0 {
+            if l <= 255 {
+                send_buffer.push(l as u8);
+            } else {
+                send_buffer.push(0);
+                send_buffer.extend_from_slice(&(l as u16).to_be_bytes());
+            }
             send_buffer.extend_from_slice(data);
         }
-        // Le = 256
-        send_buffer.push(0);
+        if l <= 255 {
+            // Le = 256
+            send_buffer.push(0);
+        } else {
+            send_buffer.push(0);
+            send_buffer.push(0);
+        }
+
+        debug!(">> {}", hex::encode(&send_buffer));
 
         let mut recv_buffer = Vec::<u8>::with_capacity(3072);
         recv_buffer.resize(3072, 0);
 
         let l = self.card.transmit(&send_buffer, &mut recv_buffer)?.len();
+        debug!("RECV {} bytes", l);
         recv_buffer.resize(l, 0);
+        debug!("<< {}", hex::encode(&recv_buffer));
 
         if l < 2 {
             return Err(anyhow::anyhow!(

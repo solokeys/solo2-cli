@@ -120,21 +120,27 @@ pub fn cli() -> clap::App<'static, 'static> {
                         .subcommand(SubCommand::with_name("aid").about("AID")),
                 ),
         )
-        // // dev PKI
-        // .subcommand(
-        //     SubCommand::with_name("dev-pki")
-        //         .about("PKI for development")
-        //         .setting(AppSettings::SubcommandRequiredElseHelp)
-        //         .setting(AppSettings::InferSubcommands)
-        //         .subcommand(
-        //             SubCommand::with_name("fido")
-        //                 .about("generate a self-signed FIDO batch attestation cert+key")
-        //                 .arg(Arg::with_name("with-nfc")
-        //                      .help("Signal NFC support")
-        //                      .long("with-nfc")
-        //                  )
-        //         )
-        //     )
+        // dev PKI
+        .subcommand(
+            SubCommand::with_name("dev-pki")
+                .about("PKI for development")
+                .setting(AppSettings::SubcommandRequiredElseHelp)
+                .setting(AppSettings::InferSubcommands)
+                .subcommand(
+                    SubCommand::with_name("fido")
+                        .about("generate a self-signed FIDO batch attestation cert+key")
+                        .arg(
+                            Arg::with_name("KEY")
+                                .help("output file, for private P256 key in binary format")
+                                .required(true),
+                        )
+                        .arg(
+                            Arg::with_name("CERT")
+                                .help("output file, for self-signed certificate in DER format")
+                                .required(true),
+                        ),
+                ),
+        )
         // inherited from lpc55-host
         .subcommand(
             SubCommand::with_name("provision")

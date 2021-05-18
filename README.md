@@ -36,6 +36,10 @@ We recommend using NXP's [development board][dev-board] instead.
 cargo install solo2
 ```
 
+For experimental "PKI lite" support, use `cargo install --features dev-pki solo2`.  
+This is not intended to and will not grow into full PKI creation + management functionality,
+the goal is only to enable developing and testing all functionality of all official apps.
+
 ### Examples
 
 If the key is in regular mode, and its firmware contains the management app:

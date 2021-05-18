@@ -142,15 +142,26 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
         }
     }
 
-    // if let Some(args) = args.subcommand_matches("dev-pki") {
-    //     if let Some(args) = args.subcommand_matches("fido") {
-    //         todo!();
-    //         // let with_nfc = args.is_present("with-nfc");
-    //         // info!("{}", with_nfc);
-    //         // let cert = solo2::dev_pki::generate_selfsigned_fido(with_nfc);
-    //         // println!("{}", cert.serialize_pem()?);
-    //     }
-    // }
+    #[cfg(not(feature = "dev-pki"))]
+    if args.subcommand_matches("dev-pki").is_some() {
+        return Err(anyhow!(
+            "Compile with `--features dev-pki` for dev PKI support!"
+        ));
+    }
+    #[cfg(feature = "dev-pki")]
+    if let Some(args) = args.subcommand_matches("dev-pki") {
+        if let Some(args) = args.subcommand_matches("fido") {
+            let (aaguid, key_trussed, key_pem, cert) = solo2::dev_pki::generate_selfsigned_fido();
+
+            info!("\n{}", key_pem);
+            info!("\n{}", cert.serialize_pem()?);
+
+            std::fs::write(args.value_of("KEY").unwrap(), &key_trussed)?;
+            std::fs::write(args.value_of("CERT").unwrap(), &cert.serialize_der()?)?;
+
+            println!("{}", hex::encode_upper(aaguid));
+        }
+    }
 
     if let Some(args) = args.subcommand_matches("bootloader") {
         let bootloader = || {
