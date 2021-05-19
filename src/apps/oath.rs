@@ -228,15 +228,44 @@ pub enum Command {
     // Authenticate(CredentialId),
     Authenticate(Authenticate),
     Delete(String),
+    List,
+    Reset,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Tag {
     CredentialId = 0x71,
+    NameList = 0x72,
     Key = 0x73,
     Challenge = 0x74,
     InitialCounter = 0x7A,
+}
+
+impl TryFrom<u8> for Tag {
+    type Error = Error;
+    fn try_from(byte: u8) -> Result<Self> {
+        use Tag::*;
+        Ok(match byte {
+            0x71 => CredentialId,
+            0x72 => NameList,
+            0x73 => Key,
+            0x74 => Challenge,
+            0x7A => InitialCounter,
+            byte => return Err(anyhow!("Not a known tag: {}", byte)),
+        })
+    }
+}
+
+impl flexiber::TagLike for Tag {
+    fn embedding(self) -> flexiber::Tag {
+        // flexiber::SimpleTag::emb
+        flexiber::Tag {
+            class: flexiber::Class::Universal,
+            constructed: false,
+            number: self as u8 as u16,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -244,6 +273,8 @@ pub enum Tag {
 pub enum Instruction {
     Put = 0x1,
     Delete = 0x2,
+    Reset = 0x4,
+    List = 0xA1,
     Calculate = 0xA2,
 }
 
@@ -253,6 +284,18 @@ impl flexiber::Encodable for Tag {
     }
     fn encode(&self, encoder: &mut flexiber::Encoder<'_>) -> flexiber::Result<()> {
         encoder.encode(&[*self as u8])
+    }
+}
+
+impl flexiber::Decodable<'_> for Tag {
+    fn decode(decoder: &mut flexiber::Decoder<'_>) -> flexiber::Result<Self> {
+        use flexiber::TagLike;
+        let simple_tag: flexiber::SimpleTag = decoder.decode()?;
+        let byte = simple_tag.embedding().number as u8;
+        let tag: Tag = byte
+            .try_into()
+            .map_err(|_| flexiber::Error::from(flexiber::ErrorKind::InvalidTag { byte }))?;
+        Ok(tag)
     }
 }
 
@@ -357,6 +400,38 @@ impl App {
 
         self.call_with(Instruction::Delete as u8, &data).map(drop)
     }
+
+    pub fn list(&mut self) -> Result<()> {
+        // let mut data = Vec::new();
+
+        let response = self.call(Instruction::List as u8)?;
+        if response.is_empty() {
+            debug!("no credentials");
+            return Ok(());
+        }
+        debug!("{:?}", &hex::encode(&response));
+        let mut decoder = flexiber::Decoder::new(response.as_slice());
+
+        loop {
+            let data = decoder
+                .decode_tagged_slice(Tag::NameList)
+                .map_err(|e| e.kind())?;
+            // debug!("{:?}", &hex::encode(data));
+            // let kind = data[0] ...
+            let credential_id = std::str::from_utf8(&data[1..])?;
+            info!("{:?}", &credential_id);
+            if decoder.is_finished() {
+                return Ok(());
+            }
+        }
+    }
+
+    pub fn reset(&mut self) -> Result<()> {
+        self.card()
+            .call(0, Instruction::Reset as u8, 0xDE, 0xAD, None)
+            .map(drop)
+        // _, self._salt, self._challenge = _parse_select(self.protocol.select(AID.OATH))
+    }
 }
 
 impl TryFrom<&clap::ArgMatches<'_>> for Command {
@@ -426,6 +501,14 @@ impl TryFrom<&clap::ArgMatches<'_>> for Command {
         if let Some(args) = args.subcommand_matches("delete") {
             let label = args.value_of("label").unwrap().to_string();
             return Ok(Command::Delete(label));
+        }
+
+        if args.subcommand_matches("list").is_some() {
+            return Ok(Command::List);
+        }
+
+        if args.subcommand_matches("reset").is_some() {
+            return Ok(Command::Reset);
         }
 
         Err(anyhow!(

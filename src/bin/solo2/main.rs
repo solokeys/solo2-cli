@@ -101,6 +101,8 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 Command::Delete(label) => {
                     app.delete(label)?;
                 }
+                Command::List => app.list()?,
+                Command::Reset => app.reset()?,
             }
         }
 

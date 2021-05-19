@@ -167,6 +167,13 @@ pub fn cli() -> clap::App<'static, 'static> {
                                  .required(true)
                              )
                         )
+                        .subcommand(SubCommand::with_name("list")
+                            .about("Lists credentials stored on the device")
+                            .visible_alias("ls")
+                        )
+                        .subcommand(SubCommand::with_name("reset")
+                            .about("Reset device, deleting all credentials")
+                        )
                 )
                 .subcommand(
                     SubCommand::with_name("provisioner")
