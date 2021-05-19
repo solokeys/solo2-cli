@@ -30,6 +30,7 @@ impl App {
     // const BOOT_TO_BOOTROM_COMMAND: u8 = 0x51;
     const GENERATE_P256_ATTESTATION: u8 = 0xbc;
     const GENERATE_ED255_ATTESTATION: u8 = 0xbb;
+    const BOOT_TO_BOOTROM: u8 = 0x51;
     const GET_UUID: u8 = 0x62;
     const REFORMAT_FS: u8 = 0xbd;
     const STORE_P256_ATTESTATION_CERT: u8 = 0xba;
@@ -65,6 +66,11 @@ impl App {
     pub fn store_trussed_p256_attestation_certificate(&mut self, der: &[u8]) -> Result<()> {
         self.call_with(Self::STORE_P256_ATTESTATION_CERT, der)
             .map(drop)
+    }
+
+    pub fn boot_to_bootrom(&mut self) -> Result<()> {
+        self.call(Self::BOOT_TO_BOOTROM)?;
+        Ok(())
     }
 
     pub fn uuid(&mut self) -> Result<u128> {

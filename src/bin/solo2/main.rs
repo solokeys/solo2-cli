@@ -150,6 +150,9 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 let certificate = std::fs::read(cert_file)?;
                 app.store_trussed_p256_attestation_certificate(&certificate)?;
             }
+            if args.subcommand_matches("boot-to-bootrom").is_some() {
+                app.boot_to_bootrom()?;
+            }
             if args.subcommand_matches("uuid").is_some() {
                 let uuid = app.uuid()?;
                 println!("{}", hex::encode_upper(uuid.to_be_bytes()));

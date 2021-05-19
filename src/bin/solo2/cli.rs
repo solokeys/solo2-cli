@@ -211,6 +211,7 @@ pub fn cli() -> clap::App<'static, 'static> {
                             SubCommand::with_name("reformat-filesystem")
                                 .about("Reformats the internal filesystem"),
                         )
+                        .subcommand(SubCommand::with_name("boot-to-bootrom").about("Boot to ROM bootloader"))
                         .subcommand(SubCommand::with_name("uuid").about("UUID (serial number)"))
                         .subcommand(
                             SubCommand::with_name("write-file")
