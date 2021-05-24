@@ -183,11 +183,15 @@ pub fn cli() -> clap::App<'static, 'static> {
                         .subcommand(SubCommand::with_name("aid").about("Prints the application's AID"))
                         .subcommand(
                             SubCommand::with_name("generate-ed255-key")
-                                .about("Generates a new Ed255 attestation key"),
+                                .about("Generates a new Trussed Ed255 attestation key"),
                         )
                         .subcommand(
                             SubCommand::with_name("generate-p256-key")
                                 .about("Generates a new Trussed P256 attestation key"),
+                        )
+                        .subcommand(
+                            SubCommand::with_name("generate-x255-key")
+                                .about("Generates a new Trussed X255 agreement key"),
                         )
                         .subcommand(
                             SubCommand::with_name("store-ed255-cert")
@@ -204,6 +208,24 @@ pub fn cli() -> clap::App<'static, 'static> {
                                 .arg(
                                     Arg::with_name("DER")
                                         .help("Certificate in DER format")
+                                        .required(true),
+                                ),
+                        )
+                        .subcommand(
+                            SubCommand::with_name("store-x255-cert")
+                                .about("Stores a Trussed X255 attestation certificate")
+                                .arg(
+                                    Arg::with_name("DER")
+                                        .help("Certificate in DER format")
+                                        .required(true),
+                                ),
+                        )
+                        .subcommand(
+                            SubCommand::with_name("store-t1-pubkey")
+                                .about("Stores the Trussed T1 intermediate public key")
+                                .arg(
+                                    Arg::with_name("BYTES")
+                                        .help("Ed255 public key (raw, 32B)")
                                         .required(true),
                                 ),
                         )

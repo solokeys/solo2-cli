@@ -137,6 +137,10 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 let public_key = app.generate_trussed_p256_attestation_key()?;
                 println!("{}", hex::encode(public_key));
             }
+            if args.subcommand_matches("generate-x255-key").is_some() {
+                let public_key = app.generate_trussed_x255_attestation_key()?;
+                println!("{}", hex::encode(public_key));
+            }
             if args.subcommand_matches("reformat-filesystem").is_some() {
                 app.reformat_filesystem()?;
             }
@@ -149,6 +153,19 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 let cert_file = args.value_of("DER").unwrap();
                 let certificate = std::fs::read(cert_file)?;
                 app.store_trussed_p256_attestation_certificate(&certificate)?;
+            }
+            if let Some(args) = args.subcommand_matches("store-x255-cert") {
+                let cert_file = args.value_of("DER").unwrap();
+                let certificate = std::fs::read(cert_file)?;
+                app.store_trussed_x255_attestation_certificate(&certificate)?;
+            }
+            if let Some(args) = args.subcommand_matches("store-t1-pubkey") {
+                let pubkey_file = args.value_of("BYTES").unwrap();
+                use core::convert::TryInto;
+                let public_key: [u8; 32] = std::fs::read(pubkey_file)?
+                    .as_slice()
+                    .try_into()?;
+                app.store_trussed_t1_intermediate_public_key(public_key)?;
             }
             if args.subcommand_matches("boot-to-bootrom").is_some() {
                 app.boot_to_bootrom()?;

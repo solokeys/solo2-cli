@@ -30,11 +30,14 @@ impl App {
     // const BOOT_TO_BOOTROM_COMMAND: u8 = 0x51;
     const GENERATE_P256_ATTESTATION: u8 = 0xbc;
     const GENERATE_ED255_ATTESTATION: u8 = 0xbb;
+    const GENERATE_X255_ATTESTATION: u8 = 0xb7;
     const BOOT_TO_BOOTROM: u8 = 0x51;
     const GET_UUID: u8 = 0x62;
     const REFORMAT_FS: u8 = 0xbd;
     const STORE_P256_ATTESTATION_CERT: u8 = 0xba;
     const STORE_ED255_ATTESTATION_CERT: u8 = 0xb9;
+    const STORE_X255_ATTESTATION_CERT: u8 = 0xb6;
+    const STORE_T1_INTERMEDIATE_PUBKEY: u8 = 0xb5;
     const WRITE_FILE: u8 = 0xbf;
 
     const PATH_ID: [u8; 2] = [0xe1, 0x01];
@@ -54,6 +57,13 @@ impl App {
             .try_into()?)
     }
 
+    pub fn generate_trussed_x255_attestation_key(&mut self) -> Result<[u8; 32]> {
+        Ok(self
+            .call(Self::GENERATE_X255_ATTESTATION)?
+            .as_slice()
+            .try_into()?)
+    }
+
     pub fn reformat_filesystem(&mut self) -> Result<()> {
         self.call(Self::REFORMAT_FS).map(drop)
     }
@@ -65,6 +75,16 @@ impl App {
 
     pub fn store_trussed_p256_attestation_certificate(&mut self, der: &[u8]) -> Result<()> {
         self.call_with(Self::STORE_P256_ATTESTATION_CERT, der)
+            .map(drop)
+    }
+
+    pub fn store_trussed_x255_attestation_certificate(&mut self, der: &[u8]) -> Result<()> {
+        self.call_with(Self::STORE_X255_ATTESTATION_CERT, der)
+            .map(drop)
+    }
+
+    pub fn store_trussed_t1_intermediate_public_key(&mut self, public_key: [u8; 32]) -> Result<()> {
+        self.call_with(Self::STORE_T1_INTERMEDIATE_PUBKEY, &public_key)
             .map(drop)
     }
 
