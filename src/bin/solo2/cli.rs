@@ -27,8 +27,8 @@ pub fn cli() -> clap::App<'static, 'static> {
                 .setting(AppSettings::SubcommandRequiredElseHelp)
                 .setting(AppSettings::InferSubcommands)
                 .subcommand(
-                    SubCommand::with_name("mgmt")
-                        .about("management app")
+                    SubCommand::with_name("admin")
+                        .about("admin app")
                         .setting(AppSettings::SubcommandRequiredElseHelp)
                         .setting(AppSettings::InferSubcommands)
                         .subcommand(SubCommand::with_name("aid").about("Prints the application's AID"))

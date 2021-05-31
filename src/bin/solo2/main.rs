@@ -26,15 +26,15 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     if let Some(args) = args.subcommand_matches("app") {
         use solo2::apps::App;
 
-        if let Some(args) = args.subcommand_matches("mgmt") {
-            info!("interacting with management app");
-            use solo2::apps::management::App as ManagementApp;
+        if let Some(args) = args.subcommand_matches("admin") {
+            info!("interacting with admin app");
+            use solo2::apps::admin::App as AdminApp;
             if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(ManagementApp::aid()).to_uppercase());
+                println!("{}", hex::encode(AdminApp::aid()).to_uppercase());
                 return Ok(());
             }
 
-            let mut app = ManagementApp::new()?;
+            let mut app = AdminApp::new()?;
             let answer_to_select = app.select()?;
             info!("answer to select: {}", &hex::encode(answer_to_select));
 
