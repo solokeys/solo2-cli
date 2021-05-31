@@ -6,10 +6,10 @@ The device can in one of two modes (USB VID:PID in brackets):
 - regular mode ([1209:BEEE][beee-pid])
 - bootloader mode ([1209:B000][b000-pid])
 
-In regular mode, only the CCID interface to apps is currently implemented.  
+In regular mode, only the CCID interface to apps is currently implemented.
 In bootloader mode, NXP's custom HID protocol is used (via [`lpc55-host`][lpc55-host]).
 
-Solo 2 is supported by Ludovic Rousseau's [CCID][solokeys-ccid] driver, but there has not been a release.  
+Solo 2 is supported by Ludovic Rousseau's [CCID][solokeys-ccid] driver, but there has not been a release.
 The included [Info.plist](Info.plist) works.
 
 [beee-pid]: https://pid.codes/1209/BEEE/
@@ -24,7 +24,7 @@ If the firmware is invalid according to the bootloader, the device always stays 
 **BUT**: If the firmware is valid according to the bootloader, and the device boots into it, but the firmware has issues
 (e.g., panics), the only way to get back into bootloader mode and flash a new firmware is by attaching a debugger.
 
-This is quite fiddly, and needs a [special cable][tag-connect].  
+This is quite fiddly, and needs a [special cable][tag-connect].
 We recommend using NXP's [development board][dev-board] instead.
 
 [tag-connect]: https://www.tag-connect.com/product/tc2030-ctx-nl-6-pin-no-legs-cable-with-10-pin-micro-connector-for-cortex-processors
@@ -36,15 +36,15 @@ We recommend using NXP's [development board][dev-board] instead.
 cargo install solo2
 ```
 
-For experimental "PKI lite" support, use `cargo install --features dev-pki solo2`.  
+For experimental "PKI lite" support, use `cargo install --features dev-pki solo2`.
 This is not intended to and will not grow into full PKI creation + management functionality,
 the goal is only to enable developing and testing all functionality of all official apps.
 
 ### Examples
 
-If the key is in regular mode, and its firmware contains the management app:
-- `solo2 app mgmt uuid` reads out the serial number.
-- `solo2 app mgmt boot-to-bootrom` switches to bootloader mode.
+If the key is in regular mode, and its firmware contains the admin app:
+- `solo2 app admin uuid` reads out the serial number.
+- `solo2 app admin boot-to-bootrom` switches to bootloader mode.
 
 If the key is in regular mode, and its firmware contains the NDEF app:
 - `solo2 app ndef capabilities` reads out the NDEF capabilities.
@@ -59,7 +59,7 @@ Note that subcommands are inferred, so e.g. `solo2 b r` works like `solo2 bootlo
 
 Uses [`pretty_env_logger`][pretty-env-logger]. For instance, set `SOLO2_LOG=info` in the environment.
 
-[pretty-env-logger]: https://docs.rs/pretty_env_logger/  
+[pretty-env-logger]: https://docs.rs/pretty_env_logger/
 
 
 ### License

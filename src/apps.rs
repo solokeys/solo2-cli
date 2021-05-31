@@ -3,7 +3,7 @@ use hex_literal::hex;
 use crate::{Card, Result};
 use pcsc::{Context, Protocols, Scope, ShareMode};
 
-pub mod management;
+pub mod admin;
 pub mod ndef;
 pub mod oath;
 pub mod piv;
@@ -15,7 +15,7 @@ pub const NIST_RID: &'static [u8] = &hex!("A000000308");
 pub const SOLOKEYS_RID: &'static [u8] = &hex!("A000000847");
 pub const YUBICO_RID: &'static [u8] = &hex!("A000000527");
 
-pub const MANAGEMENT_PIX: &'static [u8] = &hex!("00000001");
+pub const ADMIN_PIX: &'static [u8] = &hex!("00000001");
 pub const NDEF_PIX: &'static [u8] = &hex!("0101");
 pub const OATH_PIX: &'static [u8] = &hex!("2101");
 // the full PIX ends with 0100 for version 01.00,
