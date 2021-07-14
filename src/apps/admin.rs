@@ -11,9 +11,9 @@ impl super::App for App {
     const RID: &'static [u8] = super::SOLOKEYS_RID;
     const PIX: &'static [u8] = super::ADMIN_PIX;
 
-    fn new() -> Result<Self> {
+    fn new(uuid: Option<[u8; 16]>) -> Result<Self> {
         Ok(Self {
-            card: Self::connect()?,
+            card: Self::connect(uuid)?,
         })
     }
 
@@ -23,10 +23,10 @@ impl super::App for App {
 }
 
 impl App {
-    const BOOT_TO_BOOTROM_COMMAND: u8 = 0x51;
-    const REBOOT_COMMAND: u8 = 0x53;
-    const VERSION_COMMAND: u8 = 0x61;
-    const UUID_COMMAND: u8 = 0x62;
+    pub const BOOT_TO_BOOTROM_COMMAND: u8 = 0x51;
+    pub const REBOOT_COMMAND: u8 = 0x53;
+    pub const VERSION_COMMAND: u8 = 0x61;
+    pub const UUID_COMMAND: u8 = 0x62;
 
     pub fn boot_to_bootrom(&mut self) -> Result<()> {
         self.call(Self::BOOT_TO_BOOTROM_COMMAND).map(drop)

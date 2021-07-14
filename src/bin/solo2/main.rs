@@ -23,6 +23,21 @@ fn main() {
 }
 
 fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
+
+    let uuid_vec_maybe = args.value_of("uuid").map(|uuid| hex::decode(uuid).unwrap());
+    let uuid = if let Some(uuid_vec) = uuid_vec_maybe {
+        if uuid_vec.len() != 16 {
+            return Err(anyhow::anyhow!("UUID must be 16 bytes."));
+        }
+
+        let mut uuid = [0u8; 16];
+        uuid.copy_from_slice(&uuid_vec);
+
+        Some(uuid)
+    } else {
+        None
+    };
+
     if let Some(args) = args.subcommand_matches("app") {
         use solo2::apps::App;
 
@@ -34,7 +49,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let mut app = AdminApp::new()?;
+            let mut app = AdminApp::new(uuid)?;
             let answer_to_select = app.select()?;
             info!("answer to select: {}", &hex::encode(answer_to_select));
 
@@ -63,7 +78,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let mut app = NdefApp::new()?;
+            let mut app = NdefApp::new(uuid)?;
             app.select()?;
 
             if args.subcommand_matches("capabilities").is_some() {
@@ -84,7 +99,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let mut app = App::new()?;
+            let mut app = App::new(uuid)?;
             app.select()?;
 
             let command: Command = Command::try_from(args)?;
@@ -114,7 +129,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let mut app = App::new()?;
+            let mut app = App::new(uuid)?;
             app.select()?;
         }
 
@@ -126,7 +141,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let mut app = App::new()?;
+            let mut app = App::new(uuid)?;
             app.select()?;
 
             if args.subcommand_matches("generate-ed255-key").is_some() {
@@ -190,7 +205,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let mut app = App::new()?;
+            let mut app = App::new(uuid)?;
             app.select()?;
         }
     }
@@ -217,13 +232,12 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(args) = args.subcommand_matches("bootloader") {
-        let bootloader = || {
+        let bootloader =
             Bootloader::try_find(None, None, None)
-                .ok_or(anyhow!("Could not attach to a bootloader"))
-        };
+                .or_else(|_| { Err(anyhow!("Could not attach to a bootloader")) });
 
         if args.subcommand_matches("reboot").is_some() {
-            let bootloader = bootloader()?;
+            let bootloader = bootloader?;
             bootloader.reboot();
         }
         if args.subcommand_matches("ls").is_some() {
@@ -232,6 +246,11 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 println!("{:?}", &bootloader);
             }
         }
+    }
+
+    if let Some(args) = args.subcommand_matches("update") {
+        let skip_major_check = args.subcommand_matches("yes").is_some();
+        solo2::update::run_update_procedure(skip_major_check);
     }
 
     // if let Some(command) = args.subcommand_matches("provision") {

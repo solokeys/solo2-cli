@@ -8,3 +8,4 @@ pub mod error;
 pub use error::{Error, Result};
 pub mod smartcard;
 pub use smartcard::Card;
+pub mod update;

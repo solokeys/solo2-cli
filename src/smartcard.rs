@@ -2,17 +2,59 @@ use anyhow::anyhow;
 use core::convert::TryInto;
 use iso7816::Status;
 
+use crate::apps;
+
 pub struct Card {
     card: pcsc::Card,
+    uuid: Option<[u8; 16]>
 }
 
 impl From<pcsc::Card> for Card {
     fn from(card: pcsc::Card) -> Self {
-        Self { card }
+        Self { card, uuid: None }
     }
 }
 
 impl Card {
+
+    // Try to read Solo2 uuid
+    pub fn try_reading_uuid(&mut self) -> crate::Result<[u8; 16]> {
+        let mut aid: Vec<u8> = Default::default();
+        aid.extend_from_slice(apps::SOLOKEYS_RID);
+        aid.extend_from_slice(apps::ADMIN_PIX);
+
+        self.call(
+            // Class::
+            0,
+            iso7816::Instruction::Select.into(),
+            0x04,
+            0x00,
+            Some(&aid),
+        )?;
+
+        let uuid_bytes = self.call(
+            0,
+            apps::admin::App::UUID_COMMAND,
+            0x00,
+            0x00,
+            None,
+        )?;
+        
+        if uuid_bytes.len() == 16 {
+            let mut uuid = [0u8; 16];
+            uuid.clone_from_slice(&uuid_bytes);
+            self.uuid = Some(uuid.clone());
+
+            Ok(uuid)
+        } else {
+            Err(anyhow!("Did not read 16 byte uuid from mgmt app."))
+        }
+    }
+
+    pub fn last_read_uuid(&self) -> Option<[u8; 16]> {
+        return self.uuid.clone();
+    }
+
     pub fn call(
         &mut self,
         // cla: Into<u8>, ins: Into<u8>,
