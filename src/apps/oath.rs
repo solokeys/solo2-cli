@@ -16,9 +16,9 @@ impl super::App for App {
     const RID: &'static [u8] = super::YUBICO_RID;
     const PIX: &'static [u8] = super::OATH_PIX;
 
-    fn new() -> Result<Self> {
+    fn new(uuid: Option<[u8; 16]>) -> Result<Self> {
         Ok(Self {
-            card: Self::connect()?,
+            card: Self::connect(uuid)?,
         })
     }
 

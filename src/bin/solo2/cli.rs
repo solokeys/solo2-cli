@@ -20,6 +20,12 @@ pub fn cli() -> clap::App<'static, 'static> {
         .help_message("Prints help information. Use --help for more details.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::InferSubcommands)
+        .arg(Arg::with_name("uuid")
+                .long("uuid")
+                .short("u")
+                .help("Specify a 16 byte UUID for a Solo 2 / Trussed compatible device to connect to.")
+                .value_name("UUID")
+        )
         // apps
         .subcommand(
             SubCommand::with_name("app")
@@ -308,6 +314,16 @@ pub fn cli() -> clap::App<'static, 'static> {
                         .about("Reboots (into device if firmware is valid)"),
                 )
                 .subcommand(SubCommand::with_name("ls").about("Lists all available bootloaders")),
+        )
+        .subcommand(
+            SubCommand::with_name("update")
+                .about("Update to latest firmware published by SoloKeys.  Warns on Major updates.")
+                .arg(
+                    Arg::with_name("yes")
+                        .short("s")
+                        .help("Proceed with major updates without prompt.")
+                        .required(false),
+                ),
         );
 
     cli
