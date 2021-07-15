@@ -4,7 +4,7 @@ use crate::{Card, Result};
 
 pub mod admin;
 pub mod ndef;
-pub mod oath;
+// pub mod oath;
 pub mod piv;
 pub mod provisioner;
 pub mod tester;
