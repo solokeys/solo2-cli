@@ -24,10 +24,14 @@ flexiber = { git = "https://github.com/nickray/flexiber", branch = "main", featu
 hex = "0.4.3"
 hex-literal = "0.3.1"
 iso7816 = "0.1.0-alpha.0"
-lpc55 = "0.1.0-alpha.2"
+lpc55 = "0.1.0-alpha.7"
 pcsc = "2.4.0"
+reqwest = { version = "0.11", features = ["json"] }
+rust-crypto = "^0.2"
+serde_json = "1.0.64"
 sha-1 = "0.9.6"
 sha2 = "0.9.5"
+tokio = { version = "1", features = ["full"] }
 
 # cli
 clap = { version = "2.33.3", optional = true }
@@ -46,3 +50,6 @@ yasna = { version = "0.4.0", optional = true }
 default = ["cli"]
 cli = ["clap", "lazy_static", "pretty_env_logger"]
 dev-pki = ["chrono", "p256", "pkcs8", "rand_core", "rcgen", "yasna"]
+
+[patch.crates-io]
+lpc55={path = "/home/conor/lpc55-host"}

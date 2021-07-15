@@ -320,10 +320,24 @@ pub fn cli() -> clap::App<'static, 'static> {
                 .about("Update to latest firmware published by SoloKeys.  Warns on Major updates.")
                 .arg(
                     Arg::with_name("yes")
-                        .short("s")
+                        .short("y")
+                        .long("yes")
                         .help("Proceed with major updates without prompt.")
                         .required(false),
+                )
+                .arg(
+                    Arg::with_name("all")
+                        .short("a")
+                        .long("all")
+                        .help("Update all connect Solo devices.")
+                        .required(false),
+                )
+                .arg(
+                    Arg::with_name("FIRMWARE")
+                        .help("Update to a specific firmware secure boot file (.sb2).")
+                        .required(false),
                 ),
+
         );
 
     cli

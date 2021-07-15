@@ -1,7 +1,7 @@
 use crate::{Card, Result};
 
 pub struct App {
-    card: Card,
+    pub card: Card,
 }
 
 impl super::App for App {

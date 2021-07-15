@@ -10,19 +10,20 @@ use lpc55::bootloader::Bootloader;
 
 use solo2;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     pretty_env_logger::init_custom_env("SOLO2_LOG");
     info!("solo2 CLI startup");
 
     let args = cli::cli().get_matches();
 
-    if let Err(err) = try_main(args) {
+    if let Err(err) = try_main(args).await {
         eprintln!("Error: {}", err);
         std::process::exit(1);
     }
 }
 
-fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
+async fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
     let uuid_vec_maybe = args.value_of("uuid").map(|uuid| hex::decode(uuid).unwrap());
     let uuid = if let Some(uuid_vec) = uuid_vec_maybe {
@@ -232,12 +233,9 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(args) = args.subcommand_matches("bootloader") {
-        let bootloader =
-            Bootloader::try_find(None, None, None)
-                .or_else(|_| { Err(anyhow!("Could not attach to a bootloader")) });
 
         if args.subcommand_matches("reboot").is_some() {
-            let bootloader = bootloader?;
+            let bootloader = solo2::bootloader::find_bootloader(uuid)?;
             bootloader.reboot();
         }
         if args.subcommand_matches("ls").is_some() {
@@ -249,22 +247,12 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(args) = args.subcommand_matches("update") {
-        let skip_major_check = args.subcommand_matches("yes").is_some();
-        solo2::update::run_update_procedure(skip_major_check);
+        let skip_major_check = args.is_present("yes");
+        let update_all = args.is_present("all");
+
+        let sb2file = args.value_of("FIRMWARE").map(|s| s.to_string());
+        solo2::update::run_update_procedure(sb2file, uuid, skip_major_check, update_all).await?;
     }
-
-    // if let Some(command) = args.subcommand_matches("provision") {
-    //     let config_filename = command.value_of("CONFIG").unwrap();
-    //     let config = lpc55::bootloader::provision::Config::try_from(config_filename)?;
-
-    //     let bootloader = bootloader()?;
-    //     for cmd in config.provisions {
-    //         info!("cmd: {:?}", cmd);
-    //         bootloader.run_command(cmd)?;
-    //     }
-
-    //     return Ok(());
-    // }
 
     Ok(())
 }

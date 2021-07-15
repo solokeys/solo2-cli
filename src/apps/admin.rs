@@ -4,7 +4,7 @@ use super::App as _;
 use crate::{Card, Result};
 
 pub struct App {
-    card: Card,
+    pub card: Card,
 }
 
 impl super::App for App {
@@ -29,11 +29,16 @@ impl App {
     pub const UUID_COMMAND: u8 = 0x62;
 
     pub fn boot_to_bootrom(&mut self) -> Result<()> {
-        self.call(Self::BOOT_TO_BOOTROM_COMMAND).map(drop)
+        println!("Tap button on key...");
+        // Rebooting can cause the connection to return error, which is ok here.
+        self.call(Self::BOOT_TO_BOOTROM_COMMAND).map(drop).ok();
+        Ok(())
     }
 
     pub fn reboot(&mut self) -> Result<()> {
-        self.call(Self::REBOOT_COMMAND).map(drop)
+        // Rebooting can cause the connection to return error, which is ok here.
+        self.call(Self::REBOOT_COMMAND).map(drop).ok();
+        Ok(())
     }
 
     pub fn uuid(&mut self) -> Result<u128> {
