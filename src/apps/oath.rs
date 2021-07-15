@@ -9,7 +9,7 @@ use flexiber::{Encodable, TaggedSlice};
 use crate::{apps::App as _, Card, Error, Result};
 
 pub struct App {
-    card: Card,
+    pub card: Card,
 }
 
 impl super::App for App {
