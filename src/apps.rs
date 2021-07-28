@@ -1,6 +1,7 @@
 use hex_literal::hex;
 
 use crate::{Card, Result};
+use crate::device_selection::{Device, prompt_user_to_select_device};
 
 pub mod admin;
 pub mod ndef;
@@ -73,7 +74,14 @@ pub trait App: Sized {
                 return Err(anyhow::anyhow!("Could not find any Solo 2 device with uuid {}.", hex::encode(uuid)));
 
             } else {
-                prompt_user_to_pick_card(&mut cards)
+
+                let mut devices: Vec<Device> = Default::default();
+                for card in cards {
+                    devices.push(card.into())
+                }
+
+                let selected = prompt_user_to_select_device(devices)?;
+                selected.card()
             }
         } else {
             // Only one card, use it.
@@ -94,40 +102,5 @@ pub trait App: Sized {
 
     fn print_aid() {
         println!("{}", hex::encode(Self::aid()).to_uppercase());
-    }
-}
-
-fn prompt_user_to_pick_card(cards: &mut Vec<Card>) -> crate::Result<Card> {
-    use std::io::{stdin,stdout,Write};
-
-    println!(
-"Multiple smartcards connected.
-Enter 0-{} to select: ",
-        cards.len()
-    );
-
-    for i in 0 .. cards.len() {
-        if let Some(uuid) = cards[i].uuid {
-            println!("{} - \"{}\" UUID: {}", i, cards[i].reader_name, hex::encode(uuid.to_be_bytes()));
-        } else {
-            println!("{} - \"{}\"", i, cards[i].reader_name);
-        }
-    }
-
-    print!("Selection (0-9): ");
-    stdout().flush().unwrap();
-
-    let mut input = String::new();
-    stdin().read_line(&mut input).expect("Did not enter a correct string");
-
-    // remove whitespace
-    input.retain(|c| !c.is_whitespace());
-
-    let index: usize = input.parse().unwrap();
-
-    if index > (cards.len() - 1) {
-        return Err(anyhow::anyhow!("Incorrect selection ({})", input));
-    } else {
-        Ok(cards.remove(index))
     }
 }
