@@ -10,7 +10,7 @@ use crate::apps;
 #[derive(Copy, Clone, Debug)]
 pub enum Filter {
     AllCards,
-    TrussedCards,
+    SoloCards,
 }
 
 impl Default for Filter {
@@ -49,7 +49,7 @@ impl Card {
             Filter::AllCards => {
                 cards
             },
-            Filter::TrussedCards => {
+            Filter::SoloCards => {
                 cards.into_iter().filter(|card| card.uuid.is_some()).collect()
             }
         }

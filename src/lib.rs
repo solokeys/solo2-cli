@@ -2,7 +2,7 @@
 extern crate log;
 
 pub mod apps;
-pub mod bootloader;
+pub mod device_selection;
 #[cfg(feature = "dev-pki")]
 pub mod dev_pki;
 pub mod error;

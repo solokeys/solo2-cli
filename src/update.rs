@@ -7,20 +7,8 @@ use lpc55::bootloader::Bootloader;
 use crate::{Card, smartcard};
 use crate::apps::App;
 use crate::apps::admin;
+use crate::device_selection::{Device, prompt_user_to_select_device};
 
-pub enum SoloDevice {
-    Card(Card),
-    Bootloader(Bootloader),
-}
-
-impl SoloDevice {
-    pub fn uuid(&self) -> u128 {
-        match self {
-            SoloDevice::Card(card) => card.uuid.unwrap(),
-            SoloDevice::Bootloader(bootloader) => bootloader.uuid,
-        }
-    }
-}
 
 pub async fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
     println!("Downloading latest release from https://github.com/solokeys/solo2/");
@@ -96,7 +84,7 @@ pub async fn run_update_procedure (
     _skip_major_prompt: bool,
     update_all: bool,
 ) -> crate::Result<()> {
-    let trussed_cards = Card::list(smartcard::Filter::TrussedCards);
+    let solo_cards = Card::list(smartcard::Filter::SoloCards);
 
     let sbfile = if sbfile.is_none() {
         download_latest_solokeys_firmware().await?
@@ -105,17 +93,17 @@ pub async fn run_update_procedure (
     };
 
     let bootloaders = Bootloader::list();
-    let mut devices: Vec<SoloDevice> = Default::default();
-    for card in trussed_cards {
-        devices.push(SoloDevice::Card(card))
+    let mut devices: Vec<Device> = Default::default();
+    for card in solo_cards {
+        devices.push(Device::Card(card))
     }
     for bootloader in bootloaders {
-        devices.push(SoloDevice::Bootloader(bootloader))
+        devices.push(Device::Bootloader(bootloader))
     }
     
     if let Some(uuid) = uuid {
         for device in devices {
-            if device.uuid() == u128::from_be_bytes(uuid) {
+            if device.uuid().unwrap() == u128::from_be_bytes(uuid) {
                 return program_device(device, sbfile)
             }
         }
@@ -132,12 +120,12 @@ pub async fn run_update_procedure (
     Ok(())
 }
 
-pub fn program_device(device: SoloDevice, sbfile: Vec<u8>) -> crate::Result<()> {
+pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
     let bootloader = match device {
-        SoloDevice::Bootloader(bootloader) => {
+        Device::Bootloader(bootloader) => {
             bootloader
         },
-        SoloDevice::Card(card) => {
+        Device::Card(card) => {
             let uuid = card.uuid.unwrap();
             let uuid = lpc55::uuid::Builder::from_bytes(uuid.to_be_bytes()).build();
             let mut admin = admin::App{ card };
@@ -159,7 +147,7 @@ pub fn program_device(device: SoloDevice, sbfile: Vec<u8>) -> crate::Result<()> 
                 use std::io::stdin;
                 println!("Warning: This is is major update and it could risk breaking any current credentials on your key.");
                 println!("Check latest release notes here to double check: https://github.com/solokeys/solo2/releases");
-                println!("If you haven't used you key for anything yet, you can ignore this.");
+                println!("If you haven't used your key for anything yet, you can ignore this.");
 
                 println!("");
                 println!("Continue? y/Y: ");
@@ -178,13 +166,17 @@ pub fn program_device(device: SoloDevice, sbfile: Vec<u8>) -> crate::Result<()> 
             }
             admin.boot_to_bootrom().ok();
 
+            println!("Waiting for key to enter bootloader mode...");
+
             // Wait for new bootloader to enumerate
             thread::sleep(time::Duration::from_millis(100));
 
+            info!("attempt {}", 0);
             let mut bootloader = Bootloader::try_find(None, None, Some(uuid));
             
-            let mut attempts: i32 = 4;
+            let mut attempts: i32 = 10;
             while bootloader.is_err() && attempts > 0 {
+                info!("attempt {}", 11-attempts);
                 thread::sleep(time::Duration::from_millis(100));
                 bootloader = Bootloader::try_find(None, None, Some(uuid));
                 attempts -= 1;
@@ -194,58 +186,13 @@ pub fn program_device(device: SoloDevice, sbfile: Vec<u8>) -> crate::Result<()> 
         }
     };
 
+    println!("Bootloader detected. The LED should be off.");
+    println!("Writing new firmware...");
     bootloader.receive_sb_file(sbfile);
+
+    println!("Done. Rebooting key.  The LED should turn back on.");
     bootloader.reboot();
 
     Ok(())
-}
-
-/// Have user select device from currently connected devices.
-pub fn prompt_user_to_select_device(mut devices: Vec<SoloDevice>) -> crate::Result<SoloDevice> {
-    use std::io::{stdin,stdout,Write};
-
-    println!(
-"Multiple Solo 2 devices connected.
-Enter 0-{} to select: ",
-        devices.len()
-    );
-
-    for i in 0 .. devices.len() {
-        match &devices[i] {
-            SoloDevice::Bootloader(bootloader) => {
-                println!(
-                    "{} - Bootloader UUID: {}",
-                    i,
-                    hex::encode(bootloader.uuid.to_be_bytes())
-                );
-
-            },
-            SoloDevice::Card(card) => {
-                println!(
-                    "{} - \"{}\" UUID: {}",
-                    i, card.reader_name,
-                    hex::encode(card.uuid.unwrap().to_be_bytes())
-                );
-            }
-        };
-    }
-
-    print!("Selection (0-9): ");
-    stdout().flush().unwrap();
-
-    let mut input = String::new();
-    stdin().read_line(&mut input).expect("Did not enter a correct string");
-
-    // remove whitespace
-    input.retain(|c| !c.is_whitespace());
-
-    let index: usize = input.parse().unwrap();
-
-    if index > (devices.len() - 1) {
-        return Err(anyhow::anyhow!("Incorrect selection ({})", input));
-    } else {
-        Ok(devices.remove(index))
-    }
-
 }
 

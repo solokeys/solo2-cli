@@ -3,7 +3,9 @@ use clap::{self, crate_authors, crate_version, App, AppSettings, Arg, SubCommand
 const ABOUT: &str = "
 solo2 is the go-to tool to interact with a Solo 2 security key.
 
-Use -h for short descriptions and --help for more details
+Use -h for short descriptions and --help for more details.
+
+Print more logs by setting env SOLO2_LOG='info' or SOLO2_LOG='debug'.
 
 Project homepage: https://github.com/solokeys/solo2-cli
 ";

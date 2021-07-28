@@ -235,7 +235,7 @@ async fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     if let Some(args) = args.subcommand_matches("bootloader") {
 
         if args.subcommand_matches("reboot").is_some() {
-            let bootloader = solo2::bootloader::find_bootloader(uuid)?;
+            let bootloader = solo2::device_selection::find_bootloader(uuid)?;
             bootloader.reboot();
         }
         if args.subcommand_matches("ls").is_some() {
