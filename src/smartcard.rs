@@ -5,7 +5,7 @@ use iso7816::Status;
 
 use pcsc::{Context, Protocols, Scope, ShareMode};
 
-use crate::apps;
+use crate::{apps, Uuid};
 
 #[derive(Copy, Clone, Debug)]
 pub enum Filter {
@@ -22,7 +22,7 @@ impl Default for Filter {
 pub struct Card {
     card: pcsc::Card,
     pub reader_name: String,
-    pub uuid: Option<u128>,
+    pub uuid: Option<Uuid>,
 }
 
 impl TryFrom<(&std::ffi::CStr, &Context)> for Card {
@@ -30,8 +30,7 @@ impl TryFrom<(&std::ffi::CStr, &Context)> for Card {
     fn try_from(pair: (&std::ffi::CStr, &Context)) -> crate::Result<Self> {
         let (reader, context) = pair;
         let mut card = context.connect(reader, ShareMode::Shared, Protocols::ANY)?;
-        let uuid_maybe = Self::try_reading_uuid(&mut card)
-            .map(|uuid| u128::from_be_bytes(uuid)).ok();
+        let uuid_maybe = Self::try_reading_uuid(&mut card).ok();
         Ok(Self {
             card,
             reader_name: reader.to_str().unwrap().to_owned(),
@@ -42,9 +41,13 @@ impl TryFrom<(&std::ffi::CStr, &Context)> for Card {
 
 impl Card {
     pub fn list(filter: Filter) -> Vec<Self> {
-        let cards = match Self::list_failable() {
-            Ok(cards) => cards,
-            _ => Default::default(),
+        let cards = match Self::try_list() {
+            Ok(cards) => {
+                cards
+            }
+            _ => {
+                Default::default()
+            }
         };
         match filter {
             Filter::AllCards => cards,
@@ -55,7 +58,8 @@ impl Card {
         }
     }
 
-    pub fn list_failable() -> crate::Result<Vec<Self>> {
+    pub fn try_list() -> crate::Result<Vec<Self>> {
+
         let mut cards_with_trussed: Vec<Self> = Default::default();
 
         let context = Context::establish(Scope::User)?;
@@ -87,7 +91,7 @@ impl Card {
     }
 
     // Try to read Solo2 uuid
-    fn try_reading_uuid(card: &mut pcsc::Card) -> crate::Result<[u8; 16]> {
+    fn try_reading_uuid(card: &mut pcsc::Card) -> crate::Result<Uuid> {
         let mut aid: Vec<u8> = Default::default();
         aid.extend_from_slice(apps::SOLOKEYS_RID);
         aid.extend_from_slice(apps::ADMIN_PIX);
@@ -111,14 +115,9 @@ impl Card {
             None,
         )?;
 
-        if uuid_bytes.len() == 16 {
-            let mut uuid = [0u8; 16];
-            uuid.clone_from_slice(&uuid_bytes);
-
-            Ok(uuid)
-        } else {
-            Err(anyhow!("Did not read 16 byte uuid from mgmt app."))
-        }
+        Ok(Uuid::try_from(uuid_bytes.as_ref())
+            .map_err(|_| anyhow!("Did not read 16 byte uuid from mgmt app."))?
+        )
     }
 
     fn call_card(
