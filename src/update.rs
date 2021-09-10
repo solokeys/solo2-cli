@@ -7,7 +7,7 @@ use serde_json::{from_value, Value};
 use crate::{Card, smartcard, Uuid};
 use crate::apps::App;
 use crate::apps::admin;
-use crate::device_selection::{prompt_user_to_select_device, Device};
+use crate::device::{Device, prompt_user_to_select_device};
 
 pub fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
     println!("Downloading latest release from https://github.com/solokeys/solo2/");
@@ -139,26 +139,22 @@ pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
             info!("new sb2 firmware version: {:?}", sb2_product_version);
 
             if device_version_major < sb2_product_version.major as u32 {
-                use std::io::stdin;
+                use dialoguer::{Confirm, theme};
                 println!("Warning: This is is major update and it could risk breaking any current credentials on your key.");
                 println!("Check latest release notes here to double check: https://github.com/solokeys/solo2/releases");
                 println!("If you haven't used your key for anything yet, you can ignore this.");
 
-                println!("\nContinue? y/Y: ");
-
-                let mut input = String::new();
-                stdin()
-                    .read_line(&mut input)
-                    .expect("Did not enter a correct string");
-
-                // remove whitespace
-                input.retain(|c| !c.is_whitespace());
-                if ["y", "yes"].contains(&input.to_ascii_lowercase().as_str()) {
+                println!("");
+                if Confirm::with_theme(&theme::ColorfulTheme::default())
+                    .with_prompt("Continue?")
+                    .wait_for_newline(true)
+                    .interact()? {
                     println!("Continuing");
                 } else {
                     return Err(anyhow!("User aborted."));
                 }
             }
+
             admin.boot_to_bootrom().ok();
 
             println!("Waiting for key to enter bootloader mode...");

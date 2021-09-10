@@ -315,11 +315,20 @@ pub fn cli() -> clap::App<'static, 'static> {
                     SubCommand::with_name("reboot")
                         .about("Reboots (into device if firmware is valid)"),
                 )
-                .subcommand(SubCommand::with_name("ls").about("Lists all available bootloaders")),
+                .subcommand(
+                    SubCommand::with_name("list")
+                    .visible_alias("ls")
+                    .about("Lists all available bootloaders")
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("list")
+                .visible_alias("ls")
+                .about("List all device candidates.")
         )
         .subcommand(
             SubCommand::with_name("update")
-                .about("Update to latest firmware published by SoloKeys.  Warns on Major updates.")
+                .about("Update to latest firmware published by SoloKeys. Warns on Major updates.")
                 .arg(
                     Arg::with_name("yes")
                         .short("y")

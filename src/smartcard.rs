@@ -1,6 +1,5 @@
 use anyhow::anyhow;
-use core::convert::TryFrom;
-use core::convert::TryInto;
+use core::{convert::{TryFrom, TryInto}, fmt};
 use iso7816::Status;
 
 use pcsc::{Context, Protocols, Scope, ShareMode};
@@ -23,6 +22,17 @@ pub struct Card {
     card: pcsc::Card,
     pub reader_name: String,
     pub uuid: Option<Uuid>,
+}
+
+impl fmt::Display for Card {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(uuid) = self.uuid {
+            // format!("\"{}\" UUID: {}", card.reader_name, hex::encode(uuid.to_be_bytes()))
+            f.write_fmt(format_args!("Solo 2 {}", uuid.hex()))
+        } else {
+            f.write_fmt(format_args!(" \"{}\"", self.reader_name))
+        }
+    }
 }
 
 impl TryFrom<(&std::ffi::CStr, &Context)> for Card {

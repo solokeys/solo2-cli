@@ -3,14 +3,35 @@
 use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
 
+use core::fmt;
 use crate::{Card, Result, Uuid};
 
+// #[derive(Debug, Eq, PartialEq)]
 pub enum Device {
     Bootloader(Bootloader),
     Card(Card),
 }
 
+
+impl fmt::Display for Device {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Device::Bootloader(bootloader) =>
+                f.write_fmt(format_args!("Bootloader UUID: {}", Uuid::from(bootloader.uuid).hex())),
+            Device::Card(card) => card.fmt(f),
+        }
+    }
+}
+
 impl Device {
+    pub fn list() -> Vec<Self> {
+        let bootloaders = Bootloader::list().into_iter().map(Device::from);
+        let cards = Card::list(crate::smartcard::Filter::SoloCards).into_iter().map(Device::from);
+
+        let devices = bootloaders.chain(cards).collect();
+        devices
+    }
+
     /// If this is a Solo device, this will successfully report the UUID.
     /// Not guaranteed to work with other devices.
     pub fn uuid(&self) -> Result<Uuid> {
