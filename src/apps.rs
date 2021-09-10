@@ -1,7 +1,7 @@
 use hex_literal::hex;
 
-use crate::device_selection::{prompt_user_to_select_device, Device};
-use crate::{Card, Result};
+use crate::{Card, Result, Uuid};
+use crate::device_selection::{Device, prompt_user_to_select_device};
 
 pub mod admin;
 pub mod ndef;
@@ -52,7 +52,8 @@ pub trait App: Sized {
 
     fn card(&mut self) -> &mut Card;
 
-    fn connect(uuid: Option<[u8; 16]>) -> Result<Card> {
+    fn connect(uuid: Option<Uuid>) -> Result<Card> {
+
         let mut cards = Card::list(Default::default());
 
         if cards.is_empty() {
@@ -66,16 +67,14 @@ pub trait App: Sized {
                 // Just use this one.
                 for card in cards {
                     if let Some(card_uuid) = card.uuid {
-                        if card_uuid == u128::from_be_bytes(uuid) {
+                        if card_uuid == uuid {
                             return Ok(card);
                         }
                     }
                 }
 
-                return Err(anyhow::anyhow!(
-                    "Could not find any Solo 2 device with uuid {}.",
-                    hex::encode(uuid)
-                ));
+                return Err(anyhow::anyhow!("Could not find any Solo 2 device with uuid {}.", uuid.hex()));
+
             } else {
                 let mut devices: Vec<Device> = Default::default();
                 for card in cards {
@@ -91,7 +90,7 @@ pub trait App: Sized {
         }
     }
 
-    fn new(uuid: Option<[u8; 16]>) -> Result<Self>;
+    fn new(uuid: Option<Uuid>) -> Result<Self>;
 
     fn call(&mut self, instruction: u8) -> Result<Vec<u8>> {
         self.card().call(0, instruction, 0x00, 0x00, None)

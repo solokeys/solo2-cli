@@ -20,19 +20,10 @@ fn main() {
 
 fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
-    let uuid_vec_maybe = args.value_of("uuid").map(|uuid| hex::decode(uuid).unwrap());
-    let uuid = if let Some(uuid_vec) = uuid_vec_maybe {
-        if uuid_vec.len() != 16 {
-            return Err(anyhow::anyhow!("UUID must be 16 bytes."));
-        }
-
-        let mut uuid = [0u8; 16];
-        uuid.copy_from_slice(&uuid_vec);
-
-        Some(uuid)
-    } else {
-        None
-    };
+    let uuid = args.value_of("uuid")
+        // if uuid is Some, parse and fail on invalidity (no silent failure)
+        .map(|uuid| solo2::Uuid::from_hex(&uuid))
+        .transpose()?;
 
     if let Some(args) = args.subcommand_matches("app") {
         use solo2::apps::App;

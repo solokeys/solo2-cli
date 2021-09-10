@@ -9,4 +9,6 @@ pub mod error;
 pub use error::{Error, Result};
 pub mod smartcard;
 pub use smartcard::Card;
+pub mod uuid;
+pub use uuid::Uuid;
 pub mod update;

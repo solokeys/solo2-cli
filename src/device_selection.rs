@@ -3,7 +3,7 @@
 use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
 
-use crate::Card;
+use crate::{Card, Result, Uuid};
 
 pub enum Device {
     Bootloader(Bootloader),
@@ -13,21 +13,21 @@ pub enum Device {
 impl Device {
     /// If this is a Solo device, this will successfully report the UUID.
     /// Not guaranteed to work with other devices.
-    pub fn uuid(&self) -> crate::Result<u128> {
+    pub fn uuid(&self) -> Result<Uuid> {
         match self {
-            Device::Bootloader(bootloader) => Ok(bootloader.uuid),
+            Device::Bootloader(bootloader) => Ok(bootloader.uuid.into()),
             Device::Card(card) => card.uuid.ok_or(anyhow!("Device does not have a UUID")),
         }
     }
 
-    pub fn card(self) -> crate::Result<Card> {
+    pub fn card(self) -> Result<Card> {
         match self {
             Device::Card(card) => Ok(card),
             _ => Err(anyhow!("This device is in bootloader mode.")),
         }
     }
 
-    pub fn bootloader(self) -> crate::Result<Bootloader> {
+    pub fn bootloader(self) -> Result<Bootloader> {
         match self {
             Device::Bootloader(bootloader) => Ok(bootloader),
             _ => Err(anyhow!("This device is not in bootloader mode.")),
@@ -49,20 +49,16 @@ impl From<Bootloader> for Device {
 
 /// Return a specific bootloader that is connected.
 /// If no uuid is specified and there are multiple connected, the user will be prompted.
-pub fn find_bootloader(uuid: Option<[u8; 16]>) -> crate::Result<Bootloader> {
+pub fn find_bootloader(uuid: Option<Uuid>) -> Result<Bootloader> {
     let bootloaders = Bootloader::list();
 
     if let Some(uuid) = uuid {
-        let uuid_native = u128::from_be_bytes(uuid);
         for bootloader in bootloaders {
-            if bootloader.uuid == uuid_native {
+            if bootloader.uuid == uuid.u128() {
                 return Ok(bootloader);
             }
         }
-        return Err(anyhow!(
-            "Could not find any Solo 2 device with uuid {}.",
-            hex::encode(uuid)
-        ));
+        return Err(anyhow!("Could not find any Solo 2 device with uuid {}.", uuid.hex()));
     } else {
         let mut devices: Vec<Device> = Default::default();
         for bootloader in bootloaders {
@@ -75,7 +71,7 @@ pub fn find_bootloader(uuid: Option<[u8; 16]>) -> crate::Result<Bootloader> {
 }
 
 /// Have user select device from list of devices.
-pub fn prompt_user_to_select_device(mut devices: Vec<Device>) -> crate::Result<Device> {
+pub fn prompt_user_to_select_device(mut devices: Vec<Device>) -> Result<Device> {
     if devices.is_empty() {
         return Err(anyhow!("No Solo 2 devices connected"));
     }
@@ -92,7 +88,7 @@ pub fn prompt_user_to_select_device(mut devices: Vec<Device>) -> crate::Result<D
             Device::Card(card) => {
                 if let Some(uuid) = card.uuid {
                     // format!("\"{}\" UUID: {}", card.reader_name, hex::encode(uuid.to_be_bytes()))
-                    format!("Solo 2 {}", hex::encode_upper(uuid.to_be_bytes()))
+                    format!("Solo 2 {}", uuid.hex())
                 } else {
                     format!(" \"{}\"", card.reader_name)
                 }
