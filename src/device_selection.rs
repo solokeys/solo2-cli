@@ -6,8 +6,8 @@ use lpc55::bootloader::Bootloader;
 use crate::Card;
 
 pub enum Device {
-    Card(Card),
     Bootloader(Bootloader),
+    Card(Card),
 }
 
 impl Device {
@@ -15,10 +15,8 @@ impl Device {
     /// Not guaranteed to work with other devices.
     pub fn uuid(&self) -> crate::Result<u128> {
         match self {
-            Device::Card(card) => card
-                .uuid
-                .ok_or_else(|| anyhow!("Device does not have a UUID")),
             Device::Bootloader(bootloader) => Ok(bootloader.uuid),
+            Device::Card(card) => card.uuid.ok_or(anyhow!("Device does not have a UUID")),
         }
     }
 
@@ -78,54 +76,39 @@ pub fn find_bootloader(uuid: Option<[u8; 16]>) -> crate::Result<Bootloader> {
 
 /// Have user select device from list of devices.
 pub fn prompt_user_to_select_device(mut devices: Vec<Device>) -> crate::Result<Device> {
-    use std::io::{stdin, stdout, Write};
+    if devices.is_empty() {
+        return Err(anyhow!("No Solo 2 devices connected"));
+    }
 
-    println!(
-        "Multiple devices connected.
-Enter 0-{} to select: ",
-        devices.len()
-    );
-
-    for (i, item) in devices.iter().enumerate() {
-        match item {
+    let items: Vec<String> = devices.iter().map(|device| {
+        match device {
             Device::Bootloader(bootloader) => {
-                println!(
-                    "{} - Bootloader UUID: {}",
-                    i,
+                format!(
+                    "Bootloader UUID: {}",
                     hex::encode(bootloader.uuid.to_be_bytes())
-                );
-            }
+                )
+
+            },
             Device::Card(card) => {
                 if let Some(uuid) = card.uuid {
-                    println!(
-                        "{} - \"{}\" UUID: {}",
-                        i,
-                        card.reader_name,
-                        hex::encode(uuid.to_be_bytes())
-                    );
+                    // format!("\"{}\" UUID: {}", card.reader_name, hex::encode(uuid.to_be_bytes()))
+                    format!("Solo 2 {}", hex::encode_upper(uuid.to_be_bytes()))
                 } else {
-                    println!("{} - \"{}\"", i, card.reader_name);
+                    format!(" \"{}\"", card.reader_name)
                 }
             }
-        };
-    }
+        }
+    }).collect();
 
-    print!("Selection (0-9): ");
-    stdout().flush().unwrap();
+    use dialoguer::{Select, theme};
+    // let selection = Select::with_theme(&theme::SimpleTheme)
+    let selection = Select::with_theme(&theme::ColorfulTheme::default())
+        .with_prompt("Multiple Solo 2 devices connected, select one or hit Escape key")
+        .items(&items)
+        .default(0)
+        .interact_opt()?
+        .ok_or(anyhow!("No device selected"))?;
 
-    let mut input = String::new();
-    stdin()
-        .read_line(&mut input)
-        .expect("Did not enter a correct string");
+    Ok(devices.remove(selection))
 
-    // remove whitespace
-    input.retain(|c| !c.is_whitespace());
-
-    let index: usize = input.parse().unwrap();
-
-    if index > (devices.len() - 1) {
-        return Err(anyhow::anyhow!("Incorrect selection ({})", input));
-    } else {
-        Ok(devices.remove(index))
-    }
 }

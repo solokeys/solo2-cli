@@ -1,4 +1,4 @@
-use std::{thread, time};
+use std::{io::Read as _, thread, time};
 
 use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
@@ -9,23 +9,18 @@ use crate::apps::App;
 use crate::device_selection::{prompt_user_to_select_device, Device};
 use crate::{smartcard, Card};
 
-pub async fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
+pub fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
     println!("Downloading latest release from https://github.com/solokeys/solo2/");
 
-    let client = reqwest::Client::new();
-    let resp = client
-        .get("https://api.github.com/repos/solokeys/solo2/releases/latest")
-        .header("User-Agent", "solo2-cli")
-        .send()
-        .await?
-        // .text()
-        .json::<Value>()
-        .await?;
+    let resp: Value = ureq::get("https://api.github.com/repos/solokeys/solo2/releases/latest")
+        .set("User-Agent", "solo2-cli")
+        .call()?
+        .into_json()?;
 
-    let tagname: String = from_value(resp["tag_name"].clone()).unwrap();
-    let assets: Vec<Value> = from_value(resp["assets"].clone()).unwrap();
+    let tagname: String = from_value(resp["tag_name"].clone())?;
+    let assets: Vec<Value> = from_value(resp["assets"].clone())?;
 
-    let mut sbfile: Option<Vec<u8>> = None;
+    let mut sbfile = Vec::<u8>::new();
     let mut sha256hash: Option<String> = None;
 
     println!("Downloading firmware v{}...", tagname);
@@ -35,31 +30,29 @@ pub async fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
         let asset_link: String = from_value(asset["browser_download_url"].clone()).unwrap();
         if asset_name == format!("solo2-firmware-{}.sb2", tagname) {
             info!("found solo2 firmare in release");
-            sbfile = Some(
-                client
-                    .get(asset_link.clone())
-                    .header("User-Agent", "solo2-cli")
-                    .send()
-                    .await?
-                    .bytes()
-                    .await?
-                    .to_vec(),
-            );
+            sbfile.clear();
+            let source = ureq::get(&asset_link)
+                .set("User-Agent", "solo2-cli")
+                .call()?
+                .into_reader();
+            let len: u64 = from_value(asset["size"].clone()).unwrap();
+            let pb = indicatif::ProgressBar::new(len);
+
+            pb.wrap_read(source).read_to_end(&mut sbfile)?;
+
+            assert_eq!(len, sbfile.len() as u64);
         }
         if asset_name == format!("solo2-firmware-{}.sha2", tagname) {
             info!("found solo2 firmare hash in release");
-            let hashfile = client
-                .get(asset_link.clone())
-                .header("User-Agent", "solo2-cli")
-                .send()
-                .await?
-                .text()
-                .await?;
-            sha256hash = Some(hashfile.split(' ').collect::<Vec<&str>>()[0].into());
+            let hashfile = ureq::get(&asset_link)
+                .set("User-Agent", "solo2-cli")
+                .call()?
+                .into_string()?;
+            sha256hash = Some(hashfile.split(" ").collect::<Vec<&str>>()[0].into());
         }
     }
 
-    if sbfile.is_none() || sha256hash.is_none() {
+    if sbfile.is_empty() || sha256hash.is_none() {
         return Err(anyhow!("Unable to find assets in latest SoloKeys release.  Please open ticket on solokeys.com/solo2 or contact hello@solokeys.com."));
     }
 
@@ -67,18 +60,18 @@ pub async fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
     use crypto::sha2::Sha256;
 
     let mut hasher = Sha256::new();
-    hasher.input(sbfile.as_ref().unwrap());
+    hasher.input(&sbfile);
 
     if hasher.result_str() != sha256hash.unwrap() {
         return Err(anyhow!("Sha2 hash on downloaded firmware did not verify!"));
     }
-    println!("Verified hash.");
+    info!("verified hash");
 
-    Ok(sbfile.unwrap())
+    Ok(sbfile)
 }
 
 // A rather tolerant update function, intended to be used by end users.
-pub async fn run_update_procedure(
+pub fn run_update_procedure (
     sbfile: Option<String>,
     uuid: Option<[u8; 16]>,
     _skip_major_prompt: bool,
@@ -87,7 +80,7 @@ pub async fn run_update_procedure(
     let solo_cards = Card::list(smartcard::Filter::SoloCards);
 
     let sbfile = if sbfile.is_none() {
-        download_latest_solokeys_firmware().await?
+        download_latest_solokeys_firmware()?
     } else {
         std::fs::read(sbfile.unwrap())?
     };
@@ -119,7 +112,6 @@ pub async fn run_update_procedure(
         let device = prompt_user_to_select_device(devices)?;
         program_device(device, sbfile)?;
     }
-    // std::future::Future::Output(Ok(()));
     Ok(())
 }
 
@@ -133,9 +125,9 @@ pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
             admin.select().ok();
             let device_version: u32 = admin.version()?.into();
             let sb2_product_version =
-                lpc55::secure_binary::Sb2Header::from_bytes(&sbfile.as_slice()[0..96])
-                    .unwrap()
-                    .product_version();
+                lpc55::secure_binary::Sb2Header::from_bytes(&sbfile.as_slice()[..96])
+                .unwrap()
+                .product_version();
 
             // Device stores version as:
             //          major    minor   patch
