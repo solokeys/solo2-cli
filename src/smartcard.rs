@@ -31,12 +31,11 @@ impl TryFrom<(&std::ffi::CStr, &Context)> for Card {
         let (reader, context) = pair;
         let mut card = context.connect(reader, ShareMode::Shared, Protocols::ANY)?;
         let uuid_maybe = Self::try_reading_uuid(&mut card)
-            .map(u128::from_be_bytes)
-            .ok();
+            .map(|uuid| u128::from_be_bytes(uuid)).ok();
         Ok(Self {
             card,
             reader_name: reader.to_str().unwrap().to_owned(),
-            uuid: uuid_maybe,
+            uuid: uuid_maybe
         })
     }
 }
@@ -103,8 +102,14 @@ impl Card {
             Some(&aid),
         )?;
 
-        let uuid_bytes =
-            Self::call_card(card, 0, apps::admin::App::UUID_COMMAND, 0x00, 0x00, None)?;
+        let uuid_bytes = Self::call_card(
+            card,
+            0,
+            apps::admin::App::UUID_COMMAND,
+            0x00,
+            0x00,
+            None,
+        )?;
 
         if uuid_bytes.len() == 16 {
             let mut uuid = [0u8; 16];

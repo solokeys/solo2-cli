@@ -6,20 +6,20 @@ mod cli;
 use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
 
-#[tokio::main]
-async fn main() {
+fn main() {
     pretty_env_logger::init_custom_env("SOLO2_LOG");
     info!("solo2 CLI startup");
 
     let args = cli::cli().get_matches();
 
-    if let Err(err) = try_main(args).await {
+    if let Err(err) = try_main(args) {
         eprintln!("Error: {}", err);
         std::process::exit(1);
     }
 }
 
-async fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
+fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
+
     let uuid_vec_maybe = args.value_of("uuid").map(|uuid| hex::decode(uuid).unwrap());
     let uuid = if let Some(uuid_vec) = uuid_vec_maybe {
         if uuid_vec.len() != 16 {
@@ -242,7 +242,7 @@ async fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
         let update_all = args.is_present("all");
 
         let sb2file = args.value_of("FIRMWARE").map(|s| s.to_string());
-        solo2::update::run_update_procedure(sb2file, uuid, skip_major_check, update_all).await?;
+        solo2::update::run_update_procedure(sb2file, uuid, skip_major_check, update_all)?;
     }
 
     Ok(())
