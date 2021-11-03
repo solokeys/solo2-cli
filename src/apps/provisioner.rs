@@ -107,7 +107,7 @@ impl App {
             return Err(anyhow!("data too long (8192 byte limit)"));
         }
         if path.as_bytes().len() > 128 {
-            return Err(anyhow!("path {} too long (128 byte limit)"));
+            return Err(anyhow!("path {} too long (128 byte limit)", path));
         }
 
         self.call_with(Instruction::Select.into(), &Self::PATH_ID)
