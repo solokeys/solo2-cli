@@ -68,7 +68,7 @@ pub async fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
 
     let mut hasher = Sha256::new();
     hasher.input(sbfile.as_ref().unwrap());
-    
+
     if hasher.result_str() != sha256hash.unwrap() {
         return Err(anyhow!("Sha2 hash on downloaded firmware did not verify!"));
     }
@@ -100,7 +100,7 @@ pub async fn run_update_procedure (
     for bootloader in bootloaders {
         devices.push(Device::Bootloader(bootloader))
     }
-    
+
     if let Some(uuid) = uuid {
         for device in devices {
             if device.uuid().unwrap() == u128::from_be_bytes(uuid) {
@@ -130,8 +130,8 @@ pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
             let uuid = lpc55::uuid::Builder::from_bytes(uuid.to_be_bytes()).build();
             let mut admin = admin::App{ card };
             admin.select().ok();
-            let device_version = u32::from_be_bytes(admin.version()?);
-            let sb2_product_version = 
+            let device_version: u32 = admin.version()?.into();
+            let sb2_product_version =
                 lpc55::secure_binary::Sb2Header::from_bytes(&sbfile.as_slice()[0 .. 96])
                 .unwrap()
                 .product_version();
@@ -173,7 +173,7 @@ pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
 
             info!("attempt {}", 0);
             let mut bootloader = Bootloader::try_find(None, None, Some(uuid));
-            
+
             let mut attempts: i32 = 10;
             while bootloader.is_err() && attempts > 0 {
                 info!("attempt {}", 11-attempts);

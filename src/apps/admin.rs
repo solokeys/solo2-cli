@@ -1,4 +1,4 @@
-use core::convert::TryInto;
+use std::fmt;
 
 use super::App as _;
 use crate::{Card, Result};
@@ -19,6 +19,43 @@ impl super::App for App {
 
     fn card(&mut self) -> &mut Card {
         &mut self.card
+    }
+}
+
+// TODO: Make new release of lpc55-host to reuse the code there.
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+/// The decoded version.
+///
+/// Due to properties of the bootloader's internal 32-bit version,
+/// we have 10 bits for major, 16 bits for minor, and 6 bits for
+/// the patch component.
+pub struct Version {
+    pub major: u16,
+    pub minor: u16,
+    pub patch: u16,
+}
+
+impl From<Version> for u32 {
+    fn from(version: Version) -> Self {
+        ((version.major as u32) << 22) | ((version.minor as u32) << 6) | (version.patch as u32)
+    }
+}
+
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result  {
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
+    }
+}
+
+impl From<[u8; 4]> for Version {
+    fn from(bytes: [u8; 4]) -> Self {
+        let version = u32::from_be_bytes(bytes);
+        let major = (version >> 22) as _;
+        let minor = ((version >> 6) & ((1 << 16) - 1)) as _;
+        let patch = (version & ((1 << 6) - 1)) as _;
+
+        Self { major, minor, patch }
     }
 }
 
@@ -50,11 +87,12 @@ impl App {
             .map(|bytes| u128::from_be_bytes(bytes))
     }
 
-    pub fn version(&mut self) -> Result<[u8; 4]> {
+    pub fn version(&mut self) -> Result<Version> {
         let version_bytes = self.call(Self::VERSION_COMMAND)?;
-        let bytes: &[u8] = &version_bytes;
-        bytes
+        let bytes: [u8; 4] = version_bytes.as_slice()
             .try_into()
-            .map_err(|_| anyhow::anyhow!("expected 4 bytes version, got {}", &hex::encode(bytes)))
+            .map_err(|_| anyhow::anyhow!("expected 4 bytes version, got {}", &hex::encode(version_bytes)))?;
+        Ok(bytes.into())
+
     }
 }

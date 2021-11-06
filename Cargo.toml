@@ -1,8 +1,9 @@
 [package]
 name = "solo2"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["SoloKeys Developers"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.56"
 repository = "https://github.com/solokeys/solo2-cli"
 description = "Library and CLI for the SoloKeys Solo 2 security key"
 license = "Apache-2.0 OR MIT"
