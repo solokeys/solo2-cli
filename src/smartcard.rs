@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use core::{convert::{TryFrom, TryInto}, fmt};
+use core::fmt;
 use iso7816::Status;
 
 use pcsc::{Context, Protocols, Scope, ShareMode};
@@ -44,7 +44,7 @@ impl TryFrom<(&std::ffi::CStr, &Context)> for Card {
         Ok(Self {
             card,
             reader_name: reader.to_str().unwrap().to_owned(),
-            uuid: uuid_maybe
+            uuid: uuid_maybe,
         })
     }
 }
@@ -52,12 +52,8 @@ impl TryFrom<(&std::ffi::CStr, &Context)> for Card {
 impl Card {
     pub fn list(filter: Filter) -> Vec<Self> {
         let cards = match Self::try_list() {
-            Ok(cards) => {
-                cards
-            }
-            _ => {
-                Default::default()
-            }
+            Ok(cards) => cards,
+            _ => Default::default(),
         };
         match filter {
             Filter::AllCards => cards,
@@ -69,7 +65,6 @@ impl Card {
     }
 
     pub fn try_list() -> crate::Result<Vec<Self>> {
-
         let mut cards_with_trussed: Vec<Self> = Default::default();
 
         let context = Context::establish(Scope::User)?;
@@ -116,18 +111,11 @@ impl Card {
             Some(&aid),
         )?;
 
-        let uuid_bytes = Self::call_card(
-            card,
-            0,
-            apps::admin::App::UUID_COMMAND,
-            0x00,
-            0x00,
-            None,
-        )?;
+        let uuid_bytes =
+            Self::call_card(card, 0, apps::admin::App::UUID_COMMAND, 0x00, 0x00, None)?;
 
-        Ok(Uuid::try_from(uuid_bytes.as_ref())
-            .map_err(|_| anyhow!("Did not read 16 byte uuid from mgmt app."))?
-        )
+        Uuid::try_from(uuid_bytes.as_ref())
+            .map_err(|_| anyhow!("Did not read 16 byte uuid from mgmt app."))
     }
 
     fn call_card(

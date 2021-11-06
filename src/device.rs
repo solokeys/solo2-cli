@@ -3,8 +3,8 @@
 use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
 
-use core::fmt;
 use crate::{Card, Result, Uuid};
+use core::fmt;
 
 // #[derive(Debug, Eq, PartialEq)]
 pub enum Device {
@@ -12,12 +12,13 @@ pub enum Device {
     Card(Card),
 }
 
-
 impl fmt::Display for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Device::Bootloader(bootloader) =>
-                f.write_fmt(format_args!("Bootloader UUID: {}", Uuid::from(bootloader.uuid).hex())),
+            Device::Bootloader(bootloader) => f.write_fmt(format_args!(
+                "Bootloader UUID: {}",
+                Uuid::from(bootloader.uuid).hex()
+            )),
             Device::Card(card) => card.fmt(f),
         }
     }
@@ -26,10 +27,11 @@ impl fmt::Display for Device {
 impl Device {
     pub fn list() -> Vec<Self> {
         let bootloaders = Bootloader::list().into_iter().map(Device::from);
-        let cards = Card::list(crate::smartcard::Filter::SoloCards).into_iter().map(Device::from);
+        let cards = Card::list(crate::smartcard::Filter::SoloCards)
+            .into_iter()
+            .map(Device::from);
 
-        let devices = bootloaders.chain(cards).collect();
-        devices
+        bootloaders.chain(cards).collect()
     }
 
     /// If this is a Solo device, this will successfully report the UUID.
@@ -37,7 +39,9 @@ impl Device {
     pub fn uuid(&self) -> Result<Uuid> {
         match self {
             Device::Bootloader(bootloader) => Ok(bootloader.uuid.into()),
-            Device::Card(card) => card.uuid.ok_or(anyhow!("Device does not have a UUID")),
+            Device::Card(card) => card
+                .uuid
+                .ok_or_else(|| anyhow!("Device does not have a UUID")),
         }
     }
 
@@ -79,7 +83,10 @@ pub fn find_bootloader(uuid: Option<Uuid>) -> Result<Bootloader> {
                 return Ok(bootloader);
             }
         }
-        return Err(anyhow!("Could not find any Solo 2 device with uuid {}.", uuid.hex()));
+        return Err(anyhow!(
+            "Could not find any Solo 2 device with uuid {}.",
+            uuid.hex()
+        ));
     } else {
         let mut devices: Vec<Device> = Default::default();
         for bootloader in bootloaders {
@@ -97,35 +104,36 @@ pub fn prompt_user_to_select_device(mut devices: Vec<Device>) -> Result<Device> 
         return Err(anyhow!("No Solo 2 devices connected"));
     }
 
-    let items: Vec<String> = devices.iter().map(|device| {
-        match device {
-            Device::Bootloader(bootloader) => {
-                format!(
-                    "Bootloader UUID: {}",
-                    hex::encode(bootloader.uuid.to_be_bytes())
-                )
-
-            },
-            Device::Card(card) => {
-                if let Some(uuid) = card.uuid {
-                    // format!("\"{}\" UUID: {}", card.reader_name, hex::encode(uuid.to_be_bytes()))
-                    format!("Solo 2 {}", uuid.hex())
-                } else {
-                    format!(" \"{}\"", card.reader_name)
+    let items: Vec<String> = devices
+        .iter()
+        .map(|device| {
+            match device {
+                Device::Bootloader(bootloader) => {
+                    format!(
+                        "Bootloader UUID: {}",
+                        hex::encode(bootloader.uuid.to_be_bytes())
+                    )
+                }
+                Device::Card(card) => {
+                    if let Some(uuid) = card.uuid {
+                        // format!("\"{}\" UUID: {}", card.reader_name, hex::encode(uuid.to_be_bytes()))
+                        format!("Solo 2 {}", uuid.hex())
+                    } else {
+                        format!(" \"{}\"", card.reader_name)
+                    }
                 }
             }
-        }
-    }).collect();
+        })
+        .collect();
 
-    use dialoguer::{Select, theme};
+    use dialoguer::{theme, Select};
     // let selection = Select::with_theme(&theme::SimpleTheme)
     let selection = Select::with_theme(&theme::ColorfulTheme::default())
         .with_prompt("Multiple Solo 2 devices connected, select one or hit Escape key")
         .items(&items)
         .default(0)
         .interact_opt()?
-        .ok_or(anyhow!("No device selected"))?;
+        .ok_or_else(|| anyhow!("No device selected"))?;
 
     Ok(devices.remove(selection))
-
 }

@@ -1,7 +1,7 @@
 use hex_literal::hex;
 
+use crate::device::{prompt_user_to_select_device, Device};
 use crate::{Card, Result, Uuid};
-use crate::device::{Device, prompt_user_to_select_device};
 
 pub mod admin;
 pub mod ndef;
@@ -53,7 +53,6 @@ pub trait App: Sized {
     fn card(&mut self) -> &mut Card;
 
     fn connect(uuid: Option<Uuid>) -> Result<Card> {
-
         let mut cards = Card::list(Default::default());
 
         if cards.is_empty() {
@@ -73,10 +72,11 @@ pub trait App: Sized {
                     }
                 }
 
-                return Err(anyhow::anyhow!("Could not find any Solo 2 device with uuid {}.", uuid.hex()));
-
+                return Err(anyhow::anyhow!(
+                    "Could not find any Solo 2 device with uuid {}.",
+                    uuid.hex()
+                ));
             } else {
-
                 let devices = cards.into_iter().map(Device::from).collect();
 
                 let selected = prompt_user_to_select_device(devices)?;

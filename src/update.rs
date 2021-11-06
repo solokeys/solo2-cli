@@ -4,10 +4,10 @@ use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
 use serde_json::{from_value, Value};
 
-use crate::{Card, smartcard, Uuid};
-use crate::apps::App;
 use crate::apps::admin;
-use crate::device::{Device, prompt_user_to_select_device};
+use crate::apps::App;
+use crate::device::{prompt_user_to_select_device, Device};
+use crate::{smartcard, Card, Uuid};
 
 pub fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
     println!("Downloading latest release from https://github.com/solokeys/solo2/");
@@ -48,7 +48,7 @@ pub fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
                 .set("User-Agent", "solo2-cli")
                 .call()?
                 .into_string()?;
-            sha256hash = Some(hashfile.split(" ").collect::<Vec<&str>>()[0].into());
+            sha256hash = Some(hashfile.split(' ').collect::<Vec<&str>>()[0].into());
         }
     }
 
@@ -71,7 +71,7 @@ pub fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
 }
 
 // A rather tolerant update function, intended to be used by end users.
-pub fn run_update_procedure (
+pub fn run_update_procedure(
     sbfile: Option<String>,
     uuid: Option<Uuid>,
     _skip_major_prompt: bool,
@@ -99,13 +99,13 @@ pub fn run_update_procedure (
             match device.uuid() {
                 Ok(device_uuid) => {
                     if device_uuid == uuid {
-                        return program_device(device, sbfile)
+                        return program_device(device, sbfile);
                     }
                 }
                 _ => continue,
             }
         }
-        return Err(anyhow!("Cannot find solo2 device with UUID {}", uuid.hex()))
+        return Err(anyhow!("Cannot find solo2 device with UUID {}", uuid.hex()));
     } else if update_all {
         for device in devices {
             program_device(device, sbfile.clone())?;
@@ -128,8 +128,8 @@ pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
             let device_version: u32 = admin.version()?.into();
             let sb2_product_version =
                 lpc55::secure_binary::Sb2Header::from_bytes(&sbfile.as_slice()[..96])
-                .unwrap()
-                .product_version();
+                    .unwrap()
+                    .product_version();
 
             // Device stores version as:
             //          major    minor   patch
@@ -139,16 +139,16 @@ pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
             info!("new sb2 firmware version: {:?}", sb2_product_version);
 
             if device_version_major < sb2_product_version.major as u32 {
-                use dialoguer::{Confirm, theme};
+                use dialoguer::{theme, Confirm};
                 println!("Warning: This is is major update and it could risk breaking any current credentials on your key.");
                 println!("Check latest release notes here to double check: https://github.com/solokeys/solo2/releases");
-                println!("If you haven't used your key for anything yet, you can ignore this.");
+                println!("If you haven't used your key for anything yet, you can ignore this.\n");
 
-                println!("");
                 if Confirm::with_theme(&theme::ColorfulTheme::default())
                     .with_prompt("Continue?")
                     .wait_for_newline(true)
-                    .interact()? {
+                    .interact()?
+                {
                     println!("Continuing");
                 } else {
                     return Err(anyhow!("User aborted."));

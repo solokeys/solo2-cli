@@ -19,10 +19,10 @@ fn main() {
 }
 
 fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
-
-    let uuid = args.value_of("uuid")
+    let uuid = args
+        .value_of("uuid")
         // if uuid is Some, parse and fail on invalidity (no silent failure)
-        .map(|uuid| solo2::Uuid::from_hex(&uuid))
+        .map(|uuid| solo2::Uuid::from_hex(uuid))
         .transpose()?;
 
     if let Some(args) = args.subcommand_matches("app") {
@@ -229,7 +229,6 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(_args) = args.subcommand_matches("list") {
-
         let devices = solo2::Device::list();
         for device in devices {
             println!("{}", &device);

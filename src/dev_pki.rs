@@ -3,8 +3,6 @@
 //! In particular, there is no root CA, no use of hardware keys / PKCS #11,
 //! no revocation, etc. etc.
 
-use core::convert::TryInto;
-
 use pkcs8::FromPrivateKey as _;
 use rand_core::{OsRng, RngCore};
 

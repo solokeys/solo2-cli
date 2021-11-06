@@ -1,5 +1,3 @@
-use core::convert::TryInto;
-
 use anyhow::anyhow;
 use iso7816::Instruction;
 
