@@ -1,6 +1,11 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
 
 jobs:
   ci:
@@ -39,12 +44,14 @@ jobs:
           command: test
 
       - name: cargo fmt
+        if: matrix.os == 'ubuntu-latest'
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
 
       - name: cargo clippy
+        if: matrix.os == 'ubuntu-latest'
         uses: actions-rs/cargo@v1
         with:
           command: clippy

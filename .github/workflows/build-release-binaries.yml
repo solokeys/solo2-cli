@@ -1,0 +1,115 @@
+name: Build release binaries (and publish them if this is a tag)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  binaries:
+    name: ${{ matrix.os }} for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        target:
+          # - x86_64-unknown-linux-musl
+          - x86_64-unknown-linux-gnu
+          # - aarch64-unknown-linux-musl
+          - x86_64-pc-windows-msvc
+          - x86_64-apple-darwin
+          # - x86_64-unknown-freebsd
+        include:
+          # - os: ubuntu-latest
+          #   target: x86_64-unknown-linux-musl
+          #   artifact_name: target/x86_64-unknown-linux-musl/release/solo2
+          #   release_name: x86_64-unknown-linux-musl
+          #   cross: true
+          #   cargo_flags: ""
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: target/x86_64-unknown-linux-gnu/release/solo2
+            release_name: x86_64-unknown-linux-gnu
+            cross: false
+            cargo_flags: ""
+          # - os: ubuntu-latest
+          #   target: aarch64-unknown-linux-musl
+          #   artifact_name: target/aarch64-unknown-linux-musl/release/solo2
+          #   release_name: aarch64-unknown-linux-musl
+          #   cross: true
+          #   cargo_flags: ""
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: target/x86_64-pc-windows-msvc/release/solo2.exe
+            release_name: x86_64-pc-windows-msvc.exe
+            cross: false
+            cargo_flags: ""
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: target/x86_64-apple-darwin/release/solo2
+            release_name: x86_64-apple-darwin
+            cross: false
+            cargo_flags: ""
+          # - os: ubuntu-latest
+          #   target: x86_64-unknown-freebsd
+          #   artifact_name: target/x86_64-unknown-freebsd/release/solo2
+          #   release_name: x86_64-unknown-freebsd
+          #   cross: true
+          #   cargo_flags: ""
+
+    steps:
+      - name: Ubuntu dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libpcsclite-dev libudev-dev
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+
+      - name: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --locked --target=${{ matrix.target }} ${{ matrix.cargo_flags }}
+          use-cross: ${{ matrix.cross }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ matrix.artifact_name }}
+
+      ###
+      # Below this line, steps will only be ran if a tag was pushed.
+      ###
+
+      - name: Get tag name
+        id: tag_name
+        run: |
+          echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
+        shell: bash
+        if: startsWith(github.ref, 'refs/tags/v')
+
+      - name: Get CHANGELOG.md entry
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@v1
+        with:
+          version: ${{ steps.tag_name.outputs.current_version }}
+          path: ./CHANGELOG.md
+        if: startsWith(github.ref, 'refs/tags/v')
+
+      - name: Publish
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ matrix.artifact_name }}
+          tag: ${{ github.ref }}
+          asset_name: solo2-$tag-${{ matrix.release_name }}
+          body: ${{ steps.changelog_reader.outputs.log_entry }}
+        if: startsWith(github.ref, 'refs/tags/v')
