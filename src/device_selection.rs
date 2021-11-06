@@ -3,7 +3,7 @@
 use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
 
-use crate::{Card};
+use crate::Card;
 
 pub enum Device {
     Card(Card),
@@ -15,7 +15,9 @@ impl Device {
     /// Not guaranteed to work with other devices.
     pub fn uuid(&self) -> crate::Result<u128> {
         match self {
-            Device::Card(card) => card.uuid.ok_or(anyhow!("Device does not have a UUID")),
+            Device::Card(card) => card
+                .uuid
+                .ok_or_else(|| anyhow!("Device does not have a UUID")),
             Device::Bootloader(bootloader) => Ok(bootloader.uuid),
         }
     }
@@ -50,8 +52,7 @@ impl From<Bootloader> for Device {
 /// Return a specific bootloader that is connected.
 /// If no uuid is specified and there are multiple connected, the user will be prompted.
 pub fn find_bootloader(uuid: Option<[u8; 16]>) -> crate::Result<Bootloader> {
-    let bootloaders =
-        Bootloader::list();
+    let bootloaders = Bootloader::list();
 
     if let Some(uuid) = uuid {
         let uuid_native = u128::from_be_bytes(uuid);
@@ -60,9 +61,11 @@ pub fn find_bootloader(uuid: Option<[u8; 16]>) -> crate::Result<Bootloader> {
                 return Ok(bootloader);
             }
         }
-        return Err(anyhow!("Could not find any Solo 2 device with uuid {}.", hex::encode(uuid)));
+        return Err(anyhow!(
+            "Could not find any Solo 2 device with uuid {}.",
+            hex::encode(uuid)
+        ));
     } else {
-
         let mut devices: Vec<Device> = Default::default();
         for bootloader in bootloaders {
             devices.push(bootloader.into())
@@ -71,33 +74,35 @@ pub fn find_bootloader(uuid: Option<[u8; 16]>) -> crate::Result<Bootloader> {
         let selected = prompt_user_to_select_device(devices)?;
         selected.bootloader()
     }
-
 }
-
 
 /// Have user select device from list of devices.
 pub fn prompt_user_to_select_device(mut devices: Vec<Device>) -> crate::Result<Device> {
-    use std::io::{stdin,stdout,Write};
+    use std::io::{stdin, stdout, Write};
 
     println!(
-"Multiple devices connected.
+        "Multiple devices connected.
 Enter 0-{} to select: ",
         devices.len()
     );
 
-    for i in 0 .. devices.len() {
-        match &devices[i] {
+    for (i, item) in devices.iter().enumerate() {
+        match item {
             Device::Bootloader(bootloader) => {
                 println!(
                     "{} - Bootloader UUID: {}",
                     i,
                     hex::encode(bootloader.uuid.to_be_bytes())
                 );
-
-            },
+            }
             Device::Card(card) => {
                 if let Some(uuid) = card.uuid {
-                    println!("{} - \"{}\" UUID: {}", i, card.reader_name, hex::encode(uuid.to_be_bytes()));
+                    println!(
+                        "{} - \"{}\" UUID: {}",
+                        i,
+                        card.reader_name,
+                        hex::encode(uuid.to_be_bytes())
+                    );
                 } else {
                     println!("{} - \"{}\"", i, card.reader_name);
                 }
@@ -109,7 +114,9 @@ Enter 0-{} to select: ",
     stdout().flush().unwrap();
 
     let mut input = String::new();
-    stdin().read_line(&mut input).expect("Did not enter a correct string");
+    stdin()
+        .read_line(&mut input)
+        .expect("Did not enter a correct string");
 
     // remove whitespace
     input.retain(|c| !c.is_whitespace());
@@ -121,6 +128,4 @@ Enter 0-{} to select: ",
     } else {
         Ok(devices.remove(index))
     }
-
 }
-

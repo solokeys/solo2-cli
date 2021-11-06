@@ -43,7 +43,7 @@ impl From<Version> for u32 {
 }
 
 impl fmt::Display for Version {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result  {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
     }
 }
@@ -55,7 +55,11 @@ impl From<[u8; 4]> for Version {
         let minor = ((version >> 6) & ((1 << 16) - 1)) as _;
         let patch = (version & ((1 << 6) - 1)) as _;
 
-        Self { major, minor, patch }
+        Self {
+            major,
+            minor,
+            patch,
+        }
     }
 }
 
@@ -84,15 +88,17 @@ impl App {
         bytes
             .try_into()
             .map_err(|_| anyhow::anyhow!("expected 16 byte UUID, got {}", &hex::encode(bytes)))
-            .map(|bytes| u128::from_be_bytes(bytes))
+            .map(u128::from_be_bytes)
     }
 
     pub fn version(&mut self) -> Result<Version> {
         let version_bytes = self.call(Self::VERSION_COMMAND)?;
-        let bytes: [u8; 4] = version_bytes.as_slice()
-            .try_into()
-            .map_err(|_| anyhow::anyhow!("expected 4 bytes version, got {}", &hex::encode(version_bytes)))?;
+        let bytes: [u8; 4] = version_bytes.as_slice().try_into().map_err(|_| {
+            anyhow::anyhow!(
+                "expected 4 bytes version, got {}",
+                &hex::encode(version_bytes)
+            )
+        })?;
         Ok(bytes.into())
-
     }
 }

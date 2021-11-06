@@ -29,11 +29,12 @@ fn main() {
     // }
 
     // place side by side with binaries
-    let outdir = path::PathBuf::from(path::PathBuf::from(env_outdir).ancestors().skip(3).next().unwrap());
+    let outdir = path::PathBuf::from(path::PathBuf::from(env_outdir).ancestors().nth(3).unwrap());
     fs::create_dir_all(&outdir).unwrap();
     println!("{:?}", &outdir);
 
-    #[cfg(feature = "cli")] {
+    #[cfg(feature = "cli")]
+    {
         use clap::Shell;
 
         // Use clap to build completion files.

@@ -13,6 +13,10 @@ jobs:
         rust: [stable]
 
     steps:
+      - name: Ubuntu dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libpcsclite-dev libudev-dev
+
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -24,7 +28,7 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: cargo build
+      - name: cargo build --locked
         uses: actions-rs/cargo@v1
         with:
           command: build

@@ -99,7 +99,7 @@ impl App {
         bytes
             .try_into()
             .map_err(|_| anyhow::anyhow!("expected 16 byte UUID, got {}", &hex::encode(bytes)))
-            .map(|bytes| u128::from_be_bytes(bytes))
+            .map(u128::from_be_bytes)
     }
 
     pub fn write_file(&mut self, data: &[u8], path: &str) -> Result<()> {
