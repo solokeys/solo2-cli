@@ -1,14 +1,13 @@
 use std::{thread, time};
 
-use serde_json::{from_value, Value};
 use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
+use serde_json::{from_value, Value};
 
-use crate::{Card, smartcard};
-use crate::apps::App;
 use crate::apps::admin;
-use crate::device_selection::{Device, prompt_user_to_select_device};
-
+use crate::apps::App;
+use crate::device_selection::{prompt_user_to_select_device, Device};
+use crate::{smartcard, Card};
 
 pub async fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
     println!("Downloading latest release from https://github.com/solokeys/solo2/");
@@ -21,8 +20,7 @@ pub async fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
         .await?
         // .text()
         .json::<Value>()
-        .await?
-        ;
+        .await?;
 
     let tagname: String = from_value(resp["tag_name"].clone()).unwrap();
     let assets: Vec<Value> = from_value(resp["assets"].clone()).unwrap();
@@ -30,21 +28,23 @@ pub async fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
     let mut sbfile: Option<Vec<u8>> = None;
     let mut sha256hash: Option<String> = None;
 
-    println!("Downloading firmware v{}...",tagname);
+    println!("Downloading firmware v{}...", tagname);
 
     for asset in assets {
         let asset_name: String = from_value(asset["name"].clone()).unwrap();
         let asset_link: String = from_value(asset["browser_download_url"].clone()).unwrap();
         if asset_name == format!("solo2-firmware-{}.sb2", tagname) {
             info!("found solo2 firmare in release");
-            sbfile = Some(client
-                .get(asset_link.clone())
-                .header("User-Agent", "solo2-cli")
-                .send()
-                .await?
-                .bytes()
-                .await?.to_vec());
-
+            sbfile = Some(
+                client
+                    .get(asset_link.clone())
+                    .header("User-Agent", "solo2-cli")
+                    .send()
+                    .await?
+                    .bytes()
+                    .await?
+                    .to_vec(),
+            );
         }
         if asset_name == format!("solo2-firmware-{}.sha2", tagname) {
             info!("found solo2 firmare hash in release");
@@ -55,7 +55,7 @@ pub async fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
                 .await?
                 .text()
                 .await?;
-            sha256hash = Some(hashfile.split(" ").collect::<Vec<&str>>()[0].into());
+            sha256hash = Some(hashfile.split(' ').collect::<Vec<&str>>()[0].into());
         }
     }
 
@@ -78,7 +78,7 @@ pub async fn download_latest_solokeys_firmware() -> crate::Result<Vec<u8>> {
 }
 
 // A rather tolerant update function, intended to be used by end users.
-pub async fn run_update_procedure (
+pub async fn run_update_procedure(
     sbfile: Option<String>,
     uuid: Option<[u8; 16]>,
     _skip_major_prompt: bool,
@@ -104,10 +104,13 @@ pub async fn run_update_procedure (
     if let Some(uuid) = uuid {
         for device in devices {
             if device.uuid().unwrap() == u128::from_be_bytes(uuid) {
-                return program_device(device, sbfile)
+                return program_device(device, sbfile);
             }
         }
-        return Err(anyhow!("Cannot find solo2 device with UUID {}", hex::encode(uuid)))
+        return Err(anyhow!(
+            "Cannot find solo2 device with UUID {}",
+            hex::encode(uuid)
+        ));
     } else if update_all {
         for device in devices {
             program_device(device, sbfile.clone())?;
@@ -122,19 +125,17 @@ pub async fn run_update_procedure (
 
 pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
     let bootloader = match device {
-        Device::Bootloader(bootloader) => {
-            bootloader
-        },
+        Device::Bootloader(bootloader) => bootloader,
         Device::Card(card) => {
             let uuid = card.uuid.unwrap();
             let uuid = lpc55::uuid::Builder::from_bytes(uuid.to_be_bytes()).build();
-            let mut admin = admin::App{ card };
+            let mut admin = admin::App { card };
             admin.select().ok();
             let device_version: u32 = admin.version()?.into();
             let sb2_product_version =
-                lpc55::secure_binary::Sb2Header::from_bytes(&sbfile.as_slice()[0 .. 96])
-                .unwrap()
-                .product_version();
+                lpc55::secure_binary::Sb2Header::from_bytes(&sbfile.as_slice()[0..96])
+                    .unwrap()
+                    .product_version();
 
             // Device stores version as:
             //          major    minor   patch
@@ -149,20 +150,20 @@ pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
                 println!("Check latest release notes here to double check: https://github.com/solokeys/solo2/releases");
                 println!("If you haven't used your key for anything yet, you can ignore this.");
 
-                println!("");
-                println!("Continue? y/Y: ");
+                println!("\nContinue? y/Y: ");
 
                 let mut input = String::new();
-                stdin().read_line(&mut input).expect("Did not enter a correct string");
+                stdin()
+                    .read_line(&mut input)
+                    .expect("Did not enter a correct string");
 
                 // remove whitespace
                 input.retain(|c| !c.is_whitespace());
-                if ["y","yes"].contains(&input.to_ascii_lowercase().as_str()) {
+                if ["y", "yes"].contains(&input.to_ascii_lowercase().as_str()) {
                     println!("Continuing");
                 } else {
                     return Err(anyhow!("User aborted."));
                 }
-
             }
             admin.boot_to_bootrom().ok();
 
@@ -176,7 +177,7 @@ pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
 
             let mut attempts: i32 = 10;
             while bootloader.is_err() && attempts > 0 {
-                info!("attempt {}", 11-attempts);
+                info!("attempt {}", 11 - attempts);
                 thread::sleep(time::Duration::from_millis(100));
                 bootloader = Bootloader::try_find(None, None, Some(uuid));
                 attempts -= 1;
@@ -195,4 +196,3 @@ pub fn program_device(device: Device, sbfile: Vec<u8>) -> crate::Result<()> {
 
     Ok(())
 }
-

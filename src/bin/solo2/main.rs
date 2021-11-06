@@ -3,12 +3,8 @@ extern crate log;
 
 mod cli;
 
-// use core::convert::TryFrom;
-
 use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
-
-use solo2;
 
 #[tokio::main]
 async fn main() {
@@ -24,7 +20,6 @@ async fn main() {
 }
 
 async fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
-
     let uuid_vec_maybe = args.value_of("uuid").map(|uuid| hex::decode(uuid).unwrap());
     let uuid = if let Some(uuid_vec) = uuid_vec_maybe {
         if uuid_vec.len() != 16 {
@@ -177,9 +172,7 @@ async fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             }
             if let Some(args) = args.subcommand_matches("store-t1-pubkey") {
                 let pubkey_file = args.value_of("BYTES").unwrap();
-                let public_key: [u8; 32] = std::fs::read(pubkey_file)?
-                    .as_slice()
-                    .try_into()?;
+                let public_key: [u8; 32] = std::fs::read(pubkey_file)?.as_slice().try_into()?;
                 app.store_trussed_t1_intermediate_public_key(public_key)?;
             }
             if args.subcommand_matches("boot-to-bootrom").is_some() {
@@ -193,7 +186,7 @@ async fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 let file = args.value_of("DATA").unwrap();
                 let data = std::fs::read(file)?;
                 let path = args.value_of("PATH").unwrap();
-                app.write_file(&data, &path)?;
+                app.write_file(&data, path)?;
             }
         }
 
@@ -232,7 +225,6 @@ async fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(args) = args.subcommand_matches("bootloader") {
-
         if args.subcommand_matches("reboot").is_some() {
             let bootloader = solo2::device_selection::find_bootloader(uuid)?;
             bootloader.reboot();

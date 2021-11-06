@@ -1,6 +1,6 @@
 use anyhow::anyhow;
-use core::convert::TryInto;
 use core::convert::TryFrom;
+use core::convert::TryInto;
 use iso7816::Status;
 
 use pcsc::{Context, Protocols, Scope, ShareMode};
@@ -14,7 +14,9 @@ pub enum Filter {
 }
 
 impl Default for Filter {
-    fn default() -> Self { Filter::AllCards }
+    fn default() -> Self {
+        Filter::AllCards
+    }
 }
 
 pub struct Card {
@@ -29,40 +31,37 @@ impl TryFrom<(&std::ffi::CStr, &Context)> for Card {
         let (reader, context) = pair;
         let mut card = context.connect(reader, ShareMode::Shared, Protocols::ANY)?;
         let uuid_maybe = Self::try_reading_uuid(&mut card)
-            .map(|uuid| u128::from_be_bytes(uuid)).ok();
-        Ok(Self { card, reader_name: reader.to_str().unwrap().to_owned(), uuid: uuid_maybe })
+            .map(u128::from_be_bytes)
+            .ok();
+        Ok(Self {
+            card,
+            reader_name: reader.to_str().unwrap().to_owned(),
+            uuid: uuid_maybe,
+        })
     }
 }
 
 impl Card {
-
     pub fn list(filter: Filter) -> Vec<Self> {
         let cards = match Self::list_failable() {
-            Ok(cards) => {
-                cards
-            }
-            _ => {
-                Default::default()
-            }
+            Ok(cards) => cards,
+            _ => Default::default(),
         };
         match filter {
-            Filter::AllCards => {
-                cards
-            },
-            Filter::SoloCards => {
-                cards.into_iter().filter(|card| card.uuid.is_some()).collect()
-            }
+            Filter::AllCards => cards,
+            Filter::SoloCards => cards
+                .into_iter()
+                .filter(|card| card.uuid.is_some())
+                .collect(),
         }
     }
 
     pub fn list_failable() -> crate::Result<Vec<Self>> {
-
         let mut cards_with_trussed: Vec<Self> = Default::default();
 
         let context = Context::establish(Scope::User)?;
         let l = context.list_readers_len()?;
-        let mut buffer = Vec::with_capacity(l);
-        buffer.resize(l, 0);
+        let mut buffer = vec![0; l];
 
         let readers = context.list_readers(&mut buffer)?.collect::<Vec<_>>();
 
@@ -75,10 +74,13 @@ impl Card {
                 Ok(card) => {
                     cards_with_trussed.push(card);
                     debug!("Reader has a card.");
-                },
+                }
                 Err(_err) => {
                     // Not a Trussed supported device.
-                    info!("could not connect to card on reader, skipping ({:?}).", _err);
+                    info!(
+                        "could not connect to card on reader, skipping ({:?}).",
+                        _err
+                    );
                 }
             }
         }
@@ -101,15 +103,9 @@ impl Card {
             Some(&aid),
         )?;
 
-        let uuid_bytes = Self::call_card(
-            card,
-            0,
-            apps::admin::App::UUID_COMMAND,
-            0x00,
-            0x00,
-            None,
-        )?;
-        
+        let uuid_bytes =
+            Self::call_card(card, 0, apps::admin::App::UUID_COMMAND, 0x00, 0x00, None)?;
+
         if uuid_bytes.len() == 16 {
             let mut uuid = [0u8; 16];
             uuid.clone_from_slice(&uuid_bytes);
@@ -131,8 +127,6 @@ impl Card {
         data: Option<&[u8]>,
         // ) -> iso7816::Result<Vec<u8>> {
     ) -> crate::Result<Vec<u8>> {
-
-
         let data = data.unwrap_or(&[]);
         let mut send_buffer = Vec::<u8>::with_capacity(data.len() + 16);
 
@@ -152,18 +146,15 @@ impl Card {
             }
             send_buffer.extend_from_slice(data);
         }
-        if l <= 255 {
-            // Le = 256
-            send_buffer.push(0);
-        } else {
-            send_buffer.push(0);
+
+        send_buffer.push(0);
+        if l > 255 {
             send_buffer.push(0);
         }
 
         debug!(">> {}", hex::encode(&send_buffer));
 
-        let mut recv_buffer = Vec::<u8>::with_capacity(3072);
-        recv_buffer.resize(3072, 0);
+        let mut recv_buffer = vec![0; 3072];
 
         let l = card.transmit(&send_buffer, &mut recv_buffer)?.len();
         debug!("RECV {} bytes", l);
@@ -181,7 +172,7 @@ impl Card {
 
         let status = (sw1, sw2).try_into();
         if Ok(Status::Success) != status {
-            return Err(if recv_buffer.len() > 0 {
+            return Err(if !recv_buffer.is_empty() {
                 anyhow!(
                     "card signaled error {:?} ({:X}, {:X}) with data {}",
                     status,

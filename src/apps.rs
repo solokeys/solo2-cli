@@ -1,7 +1,7 @@
 use hex_literal::hex;
 
+use crate::device_selection::{prompt_user_to_select_device, Device};
 use crate::{Card, Result};
-use crate::device_selection::{Device, prompt_user_to_select_device};
 
 pub mod admin;
 pub mod ndef;
@@ -10,20 +10,20 @@ pub mod piv;
 pub mod provisioner;
 pub mod tester;
 
-pub const NFC_FORUM_RID: &'static [u8] = &hex!("D276000085");
-pub const NIST_RID: &'static [u8] = &hex!("A000000308");
-pub const SOLOKEYS_RID: &'static [u8] = &hex!("A000000847");
-pub const YUBICO_RID: &'static [u8] = &hex!("A000000527");
+pub const NFC_FORUM_RID: &[u8] = &hex!("D276000085");
+pub const NIST_RID: &[u8] = &hex!("A000000308");
+pub const SOLOKEYS_RID: &[u8] = &hex!("A000000847");
+pub const YUBICO_RID: &[u8] = &hex!("A000000527");
 
-pub const ADMIN_PIX: &'static [u8] = &hex!("00000001");
-pub const NDEF_PIX: &'static [u8] = &hex!("0101");
-pub const OATH_PIX: &'static [u8] = &hex!("2101");
+pub const ADMIN_PIX: &[u8] = &hex!("00000001");
+pub const NDEF_PIX: &[u8] = &hex!("0101");
+pub const OATH_PIX: &[u8] = &hex!("2101");
 // the full PIX ends with 0100 for version 01.00,
 // truncated is enough to select
-// pub const PIV_PIX: &'static [u8] = &hex!("000010000100");
-pub const PIV_PIX: &'static [u8] = &hex!("00001000");
-pub const PROVISIONER_PIX: &'static [u8] = &hex!("01000001");
-pub const TESTER_PIX: &'static [u8] = &hex!("01000000");
+// pub const PIV_PIX: &[u8] = &hex!("000010000100");
+pub const PIV_PIX: &[u8] = &hex!("00001000");
+pub const PROVISIONER_PIX: &[u8] = &hex!("01000001");
+pub const TESTER_PIX: &[u8] = &hex!("01000000");
 
 pub trait App: Sized {
     const RID: &'static [u8];
@@ -53,11 +53,12 @@ pub trait App: Sized {
     fn card(&mut self) -> &mut Card;
 
     fn connect(uuid: Option<[u8; 16]>) -> Result<Card> {
-
         let mut cards = Card::list(Default::default());
 
-        if cards.len() == 0 {
-            return Err(anyhow::anyhow!("Could not find any Solo 2 devices connected."));
+        if cards.is_empty() {
+            return Err(anyhow::anyhow!(
+                "Could not find any Solo 2 devices connected."
+            ));
         }
 
         if cards.len() > 1 {
@@ -71,10 +72,11 @@ pub trait App: Sized {
                     }
                 }
 
-                return Err(anyhow::anyhow!("Could not find any Solo 2 device with uuid {}.", hex::encode(uuid)));
-
+                return Err(anyhow::anyhow!(
+                    "Could not find any Solo 2 device with uuid {}.",
+                    hex::encode(uuid)
+                ));
             } else {
-
                 let mut devices: Vec<Device> = Default::default();
                 for card in cards {
                     devices.push(card.into())
@@ -87,7 +89,6 @@ pub trait App: Sized {
             // Only one card, use it.
             Ok(cards.remove(0))
         }
-
     }
 
     fn new(uuid: Option<[u8; 16]>) -> Result<Self>;
@@ -97,7 +98,7 @@ pub trait App: Sized {
     }
 
     fn call_with(&mut self, instruction: u8, data: &[u8]) -> Result<Vec<u8>> {
-        self.card().call(0, instruction, 0x00, 0x00, Some(&data))
+        self.card().call(0, instruction, 0x00, 0x00, Some(data))
     }
 
     fn print_aid() {
