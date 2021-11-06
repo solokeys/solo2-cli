@@ -1,4 +1,3 @@
-use core::convert::{TryFrom, TryInto};
 use crate::{Error, Result};
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
@@ -46,6 +45,3 @@ impl Uuid {
         bytes.as_slice().try_into()
     }
 }
-
-
-
