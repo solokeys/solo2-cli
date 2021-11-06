@@ -10,8 +10,6 @@ license = "Apache-2.0 OR MIT"
 readme = "README.md"
 documentation = "https://docs.rs/solo2"
 
-[lib]
-
 [[bin]]
 name = "solo2"
 required-features = ["cli"]
