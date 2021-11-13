@@ -750,9 +750,8 @@ dependencies = [
 
 [[package]]
 name = "lpc55"
-version = "0.1.0-alpha.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53152e2b2aca5ff3b921a4e58a1ece73deb8a3544d12b3a88ae6f5184636a616"
+version = "0.1.0-alpha.8"
+source = "git+https://github.com/lpc55/lpc55-host?branch=win-fix#c1aa60e5a1cd79cdfea5c8b3d08effc274aec238"
 dependencies = [
  "aes",
  "anyhow",
@@ -1472,7 +1471,7 @@ checksum = "1ecab6c735a6bb4139c0caafd0cc3635748bbb3acf4550e8138122099251f309"
 
 [[package]]
 name = "solo2"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "anyhow",
  "chrono",

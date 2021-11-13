@@ -1,6 +1,6 @@
 [package]
 name = "solo2"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["SoloKeys Developers"]
 edition = "2021"
 rust-version = "1.56"
@@ -23,7 +23,7 @@ data-encoding = "2.3.2"
 hex = "0.4.3"
 hex-literal = "0.3.1"
 iso7816 = "0.1.0-alpha.0"
-lpc55 = "0.1.0-alpha.7"
+lpc55 = { version = "0.1.0-alpha.8", git = "https://github.com/lpc55/lpc55-host", branch = "win-fix" }
 pcsc = "2.4.0"
 # reqwest = { version = "0.11", features = ["json"] }
 rust-crypto = "^0.2"
