@@ -9,8 +9,10 @@ The device can in one of two modes (USB VID:PID in brackets):
 In regular mode, only the CCID interface to apps is currently implemented.
 In bootloader mode, NXP's custom HID protocol is used (via [`lpc55-host`][lpc55-host]).
 
-Solo 2 is supported by Ludovic Rousseau's [CCID][solokeys-ccid] driver, but there has not been a release.
-The included [Info.plist](Info.plist) works.
+Solo 2 is supported by Ludovic Rousseau's [CCID][solokeys-ccid] driver since version 1.4.35.
+This has been rolled out to Debian Unstable, Fedora 35 and Arch Linux. If your distribution
+lags the release schedule, replace your distribution package `Info.plist` with the included
+[Info.plist](Info.plist).
 
 [beee-pid]: https://pid.codes/1209/BEEE/
 [b000-pid]: https://pid.codes/1209/B000/
