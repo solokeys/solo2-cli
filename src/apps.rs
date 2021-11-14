@@ -73,8 +73,8 @@ pub trait App: Sized {
                 }
 
                 return Err(anyhow::anyhow!(
-                    "Could not find any Solo 2 device with uuid {}.",
-                    uuid.hex()
+                    "Could not find any Solo 2 device with uuid {:X}.",
+                    uuid
                 ));
             } else {
                 let devices = cards.into_iter().map(Device::from).collect();

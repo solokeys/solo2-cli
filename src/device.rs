@@ -3,8 +3,79 @@
 use anyhow::anyhow;
 use lpc55::bootloader::Bootloader;
 
-use crate::{Card, Result, Uuid};
+use crate::{Card, Error, Result, Smartcard, Uuid};
 use core::fmt;
+
+pub struct Solo2 {
+    card: Smartcard,
+    uuid: Uuid,
+}
+
+impl fmt::Debug for Solo2 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> core::result::Result<(), fmt::Error> {
+        write!(f, "Solo 2 {:X} ({})", &self.uuid, &self.card.name)
+    }
+}
+
+
+impl Solo2 {
+    pub fn list() -> Vec<Self> {
+        let smartcards = Smartcard::list();
+        smartcards.into_iter()
+            .filter_map(|card| Self::try_from(card).ok())
+            .collect()
+    }
+
+    pub fn as_smartcard(&self) -> &Smartcard {
+        self.as_ref()
+    }
+
+    pub fn as_smartcard_mut(&mut self) -> &mut Smartcard {
+        self.as_mut()
+    }
+}
+
+impl AsRef<Smartcard> for Solo2 {
+    fn as_ref(&self) -> &Smartcard {
+        &self.card
+    }
+}
+
+impl AsMut<Smartcard> for Solo2 {
+    fn as_mut(&mut self) -> &mut Smartcard {
+        &mut self.card
+    }
+}
+
+impl TryFrom<Smartcard> for Solo2 {
+    type Error = Error;
+    fn try_from(card: Smartcard) -> Result<Solo2> {
+        use crate::apps;
+
+        let mut aid: Vec<u8> = Default::default();
+        aid.extend_from_slice(apps::SOLOKEYS_RID);
+        aid.extend_from_slice(apps::ADMIN_PIX);
+
+        let mut card = card;
+        card.call(
+            0, iso7816::Instruction::Select.into(),
+            0x04, 0x00,
+            Some(&aid),
+        )?;
+
+        let uuid_bytes: [u8; 16] = card.call(
+            0, apps::admin::App::UUID_COMMAND,
+            0x00, 0x00,
+            None,
+        )?
+            .try_into()
+            .map_err(|_| anyhow!("Did not read 16 byte uuid from mgmt app."))?;
+
+        let uuid = Uuid::from_bytes(uuid_bytes);
+
+        Ok(Solo2 { card, uuid })
+    }
+}
 
 // #[derive(Debug, Eq, PartialEq)]
 pub enum Device {
@@ -16,8 +87,8 @@ impl fmt::Display for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Device::Bootloader(bootloader) => f.write_fmt(format_args!(
-                "Bootloader UUID: {}",
-                Uuid::from(bootloader.uuid).hex()
+                "Bootloader UUID: {:X}",
+                Uuid::from_u128(bootloader.uuid),
             )),
             Device::Card(card) => card.fmt(f),
         }
@@ -38,7 +109,7 @@ impl Device {
     /// Not guaranteed to work with other devices.
     pub fn uuid(&self) -> Result<Uuid> {
         match self {
-            Device::Bootloader(bootloader) => Ok(bootloader.uuid.into()),
+            Device::Bootloader(bootloader) => Ok(Uuid::from_u128(bootloader.uuid)),
             Device::Card(card) => card
                 .uuid
                 .ok_or_else(|| anyhow!("Device does not have a UUID")),
@@ -79,13 +150,13 @@ pub fn find_bootloader(uuid: Option<Uuid>) -> Result<Bootloader> {
 
     if let Some(uuid) = uuid {
         for bootloader in bootloaders {
-            if bootloader.uuid == uuid.u128() {
+            if bootloader.uuid == uuid.as_u128() {
                 return Ok(bootloader);
             }
         }
         return Err(anyhow!(
-            "Could not find any Solo 2 device with uuid {}.",
-            uuid.hex()
+            "Could not find any Solo 2 device with uuid {:X}.",
+            uuid,
         ));
     } else {
         let mut devices: Vec<Device> = Default::default();
@@ -117,7 +188,7 @@ pub fn prompt_user_to_select_device(mut devices: Vec<Device>) -> Result<Device> 
                 Device::Card(card) => {
                     if let Some(uuid) = card.uuid {
                         // format!("\"{}\" UUID: {}", card.reader_name, hex::encode(uuid.to_be_bytes()))
-                        format!("Solo 2 {}", uuid.hex())
+                        format!("Solo 2 {:X}", uuid)
                     } else {
                         format!(" \"{}\"", card.reader_name)
                     }

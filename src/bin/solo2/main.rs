@@ -8,7 +8,7 @@ use lpc55::bootloader::Bootloader;
 
 fn main() {
     pretty_env_logger::init_custom_env("SOLO2_LOG");
-    info!("solo2 CLI startup");
+    restore_cursor_on_ctrl_c();
 
     let args = cli::cli().get_matches();
 
@@ -22,7 +22,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     let uuid = args
         .value_of("uuid")
         // if uuid is Some, parse and fail on invalidity (no silent failure)
-        .map(|uuid| solo2::Uuid::from_hex(uuid))
+        .map(|uuid| uuid.parse())
         .transpose()?;
 
     if let Some(args) = args.subcommand_matches("app") {
@@ -53,7 +53,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             }
             if args.subcommand_matches("version").is_some() {
                 let version = app.version()?;
-                println!("{}", version);
+                println!("{}", version.to_calver());
             }
         }
 
@@ -244,4 +244,16 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+/// In `dialoguer` dialogs, the cursor is hidden and, if the user interrupts via Ctrl-C,
+/// not shown again (for reasons). This is a best effort attempt to show the cursor again
+/// in these situations.
+fn restore_cursor_on_ctrl_c() {
+    ctrlc::set_handler(move || {
+        let term = dialoguer::console::Term::stderr();
+        term.show_cursor().ok();
+        // Ctrl-C exit code = 130
+        std::process::exit(130);
+    }).ok();
 }
