@@ -333,14 +333,14 @@ pub fn cli() -> clap::App<'static, 'static> {
                     Arg::with_name("yes")
                         .short("y")
                         .long("yes")
-                        .help("Proceed with major updates without prompt.")
+                        .help("DANGER! Proceed with major updates without prompt.")
                         .required(false),
                 )
                 .arg(
                     Arg::with_name("all")
                         .short("a")
                         .long("all")
-                        .help("Update all connect Solo devices.")
+                        .help("Update all connected SoloKeys Solo 2 devices.")
                         .required(false),
                 )
                 .arg(

@@ -1,25 +1,13 @@
 use iso7816::Instruction;
 
 use super::App as _;
-use crate::{Card, Result, Uuid};
+use crate::{Smartcard, Result};
 
-pub struct App {
-    pub card: Card,
-}
+app_boilerplate!();
 
 impl super::App for App {
     const RID: &'static [u8] = super::NFC_FORUM_RID;
     const PIX: &'static [u8] = super::NDEF_PIX;
-
-    fn new(uuid: Option<Uuid>) -> Result<Self> {
-        Ok(Self {
-            card: Self::connect(uuid)?,
-        })
-    }
-
-    fn card(&mut self) -> &mut Card {
-        &mut self.card
-    }
 }
 
 impl App {

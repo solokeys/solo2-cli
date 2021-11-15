@@ -4,7 +4,8 @@ extern crate log;
 mod cli;
 
 use anyhow::anyhow;
-use lpc55::bootloader::Bootloader;
+use lpc55::bootloader::{Bootloader, UuidSelectable};
+use solo2::{Device, Smartcard, Uuid};
 
 fn main() {
     pretty_env_logger::init_custom_env("SOLO2_LOG");
@@ -16,6 +17,36 @@ fn main() {
         eprintln!("Error: {}", err);
         std::process::exit(1);
     }
+}
+
+/// description: plural of thing to be selected, e.g. "Solo 2 devices"
+pub fn interactively_select<T: core::fmt::Display>(candidates: Vec<T>, description: &str) -> anyhow::Result<T> {
+    let mut candidates = match candidates.len() {
+        0 => return Err(anyhow!("Empty list of {}", description)),
+        1 => { let mut candidates = candidates; return Ok(candidates.remove(0)) }
+        _ => candidates
+    };
+
+    let items: Vec<String> = candidates.iter().map(|candidate| format!("{}", &candidate)).collect();
+
+    use dialoguer::{theme, Select};
+    // let selection = Select::with_theme(&theme::SimpleTheme)
+    let selection = Select::with_theme(&theme::ColorfulTheme::default())
+        .with_prompt(format!("Multiple {} available, select one or hit Escape key", description))
+        .items(&items)
+        .default(0)
+        .interact_opt()?
+        .ok_or_else(|| anyhow!("No candidate selected"))?;
+
+    Ok(candidates.remove(selection))
+}
+
+pub fn unwrap_or_interactively_select<T: core::fmt::Display + UuidSelectable>(uuid: Option<Uuid>, description: &str) -> anyhow::Result<T> {
+    let thing = match uuid {
+        Some(uuid) => T::having(uuid)?,
+        None => interactively_select(T::list(), description)?,
+    };
+    Ok(thing)
 }
 
 fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
@@ -31,17 +62,28 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
         if let Some(args) = args.subcommand_matches("admin") {
             info!("interacting with admin app");
             use solo2::apps::admin::App as AdminApp;
+
             if args.subcommand_matches("aid").is_some() {
                 println!("{}", hex::encode(AdminApp::aid()).to_uppercase());
                 return Ok(());
             }
 
-            let mut app = AdminApp::new(uuid)?;
+            let card = unwrap_or_interactively_select(uuid, "smartcards")?;
+            let mut app = AdminApp::with(card);
             let answer_to_select = app.select()?;
             info!("answer to select: {}", &hex::encode(answer_to_select));
 
             if args.subcommand_matches("boot-to-bootrom").is_some() {
-                app.boot_to_bootrom()?;
+                let uuid = app.uuid()?;
+                // ignore errors based on dropped connection
+                // TODO: should we raise others?
+                app.boot_to_bootrom().ok();
+
+                println!("Tap button on key to reboot, or replug to abort...");
+                while !Bootloader::having(uuid).is_ok() {
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+                }
+                println!("...rebooted");
             }
             if args.subcommand_matches("reboot").is_some() {
                 info!("attempting reboot");
@@ -49,7 +91,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             }
             if args.subcommand_matches("uuid").is_some() {
                 let uuid = app.uuid()?;
-                println!("{}", hex::encode_upper(uuid.to_be_bytes()));
+                println!("{:X}", uuid.to_simple());
             }
             if args.subcommand_matches("version").is_some() {
                 let version = app.version()?;
@@ -65,7 +107,12 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let mut app = NdefApp::new(uuid)?;
+            let card = match uuid {
+                Some(uuid) => Smartcard::having(uuid)?,
+                None => interactively_select(Smartcard::list(), "smartcards")?,
+            };
+
+            let mut app = NdefApp::with(card);
             app.select()?;
 
             if args.subcommand_matches("capabilities").is_some() {
@@ -108,17 +155,17 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
         //     }
         // }
 
-        if let Some(args) = args.subcommand_matches("piv") {
-            info!("interacting with PIV app");
-            use solo2::apps::piv::App;
-            if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(App::aid()).to_uppercase());
-                return Ok(());
-            }
+        // if let Some(args) = args.subcommand_matches("piv") {
+        //     info!("interacting with PIV app");
+        //     use solo2::apps::piv::App;
+        //     if args.subcommand_matches("aid").is_some() {
+        //         println!("{}", hex::encode(App::aid()).to_uppercase());
+        //         return Ok(());
+        //     }
 
-            let mut app = App::new(uuid)?;
-            app.select()?;
-        }
+        //     let mut app = App::new(uuid)?;
+        //     app.select()?;
+        // }
 
         if let Some(args) = args.subcommand_matches("provisioner") {
             info!("interacting with Provisioner app");
@@ -128,7 +175,8 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let mut app = App::new(uuid)?;
+            let card = unwrap_or_interactively_select(uuid, "smartcards")?;
+            let mut app = App::with(card);
             app.select()?;
 
             if args.subcommand_matches("generate-ed255-key").is_some() {
@@ -189,7 +237,8 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let mut app = App::new(uuid)?;
+            let card = unwrap_or_interactively_select(uuid, "smartcards")?;
+            let mut app = App::with(card);
             app.select()?;
         }
     }
@@ -217,7 +266,10 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
     if let Some(args) = args.subcommand_matches("bootloader") {
         if args.subcommand_matches("reboot").is_some() {
-            let bootloader = solo2::device::find_bootloader(uuid)?;
+            let bootloader = match uuid {
+                Some(uuid) => Bootloader::having(uuid)?,
+                None => interactively_select(Bootloader::list(), "Solo 2 bootloaders")?,
+            };
             bootloader.reboot();
         }
         if args.subcommand_matches("ls").is_some() {
@@ -236,11 +288,32 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(args) = args.subcommand_matches("update") {
-        let skip_major_check = args.is_present("yes");
+        let skip_major_prompt = args.is_present("yes");
         let update_all = args.is_present("all");
 
-        let sb2file = args.value_of("FIRMWARE").map(|s| s.to_string());
-        solo2::update::run_update_procedure(sb2file, uuid, skip_major_check, update_all)?;
+        let sb2_filepath = args.value_of("FIRMWARE").map(|s| s.to_string());
+
+        use solo2::Firmware;
+
+        let firmware: Firmware = sb2_filepath
+            .map(Firmware::read_from_file)
+            .unwrap_or_else(|| {
+                println!("Downloading latest release from https://github.com/solokeys/solo2/");
+                Firmware::download_latest()
+            })?;
+
+        if update_all {
+            for device in Device::list() {
+                device.program(firmware.clone(), skip_major_prompt)?;
+            }
+            return Ok(());
+        } else {
+            let device = match uuid {
+                Some(uuid) => Device::having(uuid)?,
+                None => interactively_select(Device::list(), "Solo 2 devices")?,
+            };
+            return device.program(firmware, skip_major_prompt);
+        }
     }
 
     Ok(())

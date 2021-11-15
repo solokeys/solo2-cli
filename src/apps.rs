@@ -1,12 +1,52 @@
-use hex_literal::hex;
+//! Middleware to use the Trussed apps on a Solo 2 device.
 
-use crate::device::{prompt_user_to_select_device, Device};
-use crate::{Card, Result, Uuid};
+use hex_literal::hex;
+use lpc55::UuidSelectable;
+
+// use crate::device::{prompt_user_to_select_device, Device};
+use crate::{Smartcard, Result, Uuid};
+
+/// This feels totally boilerplatey, didn't think hard about how to reformulate yet.
+///
+/// For instance, the Apps might be extension traits, implemented on the Smartcard itself?
+#[macro_export]
+macro_rules! app_boilerplate(
+    () => {
+
+        pub struct App {
+            pub card: Smartcard,
+        }
+
+        impl From<Smartcard> for App {
+            fn from(card: Smartcard) -> Self {
+                Self { card }
+            }
+        }
+
+        impl From<App> for Smartcard {
+            fn from(app: App) -> Self {
+                app.card
+            }
+        }
+
+        impl AsRef<Smartcard> for App {
+            fn as_ref(&self) -> &Smartcard {
+                &self.card
+            }
+        }
+
+        impl AsMut<Smartcard> for App {
+            fn as_mut(&mut self) -> &mut Smartcard {
+                &mut self.card
+            }
+        }
+    }
+);
 
 pub mod admin;
 pub mod ndef;
 // pub mod oath;
-pub mod piv;
+// pub mod piv;
 pub mod provisioner;
 pub mod tester;
 
@@ -25,7 +65,7 @@ pub const PIV_PIX: &[u8] = &hex!("00001000");
 pub const PROVISIONER_PIX: &[u8] = &hex!("01000001");
 pub const TESTER_PIX: &[u8] = &hex!("01000000");
 
-pub trait App: Sized {
+pub trait App: AsRef<Smartcard> + AsMut<Smartcard> + From<Smartcard> + Into<Smartcard> + Sized {
     const RID: &'static [u8];
     const PIX: &'static [u8];
 
@@ -50,45 +90,22 @@ pub trait App: Sized {
         )
     }
 
-    fn card(&mut self) -> &mut Card;
-
-    fn connect(uuid: Option<Uuid>) -> Result<Card> {
-        let mut cards = Card::list(Default::default());
-
-        if cards.is_empty() {
-            return Err(anyhow::anyhow!(
-                "Could not find any Solo 2 devices connected."
-            ));
-        }
-
-        if cards.len() > 1 {
-            if let Some(uuid) = uuid {
-                // Just use this one.
-                for card in cards {
-                    if let Some(card_uuid) = card.uuid {
-                        if card_uuid == uuid {
-                            return Ok(card);
-                        }
-                    }
-                }
-
-                return Err(anyhow::anyhow!(
-                    "Could not find any Solo 2 device with uuid {:X}.",
-                    uuid
-                ));
-            } else {
-                let devices = cards.into_iter().map(Device::from).collect();
-
-                let selected = prompt_user_to_select_device(devices)?;
-                selected.card()
-            }
-        } else {
-            // Only one card, use it.
-            Ok(cards.remove(0))
-        }
+    fn card(&mut self) -> &mut Smartcard {
+        self.as_mut()
     }
 
-    fn new(uuid: Option<Uuid>) -> Result<Self>;
+    fn new(uuid: Uuid) -> Result<Self> {
+        let card = crate::Smartcard::having(uuid)?;
+        Ok(Self::with(card))
+    }
+
+    fn with(card: Smartcard) -> Self {
+        Self::from(card)
+    }
+
+    fn into_inner(self) -> Smartcard {
+        self.into()
+    }
 
     fn call(&mut self, instruction: u8) -> Result<Vec<u8>> {
         self.card().call(0, instruction, 0x00, 0x00, None)
@@ -102,3 +119,4 @@ pub trait App: Sized {
         println!("{}", hex::encode(Self::aid()).to_uppercase());
     }
 }
+

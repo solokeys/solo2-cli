@@ -1,26 +1,14 @@
 use anyhow::anyhow;
 use iso7816::Instruction;
 
-use super::App as _;
-use crate::{Card, Result, Uuid};
+use crate::apps::App as _;
+use crate::{Smartcard, Result};
 
-pub struct App {
-    pub card: Card,
-}
+app_boilerplate!();
 
 impl super::App for App {
     const RID: &'static [u8] = super::SOLOKEYS_RID;
     const PIX: &'static [u8] = super::PROVISIONER_PIX;
-
-    fn new(uuid: Option<Uuid>) -> Result<Self> {
-        Ok(Self {
-            card: Self::connect(uuid)?,
-        })
-    }
-
-    fn card(&mut self) -> &mut Card {
-        &mut self.card
-    }
 }
 
 impl App {
@@ -87,8 +75,7 @@ impl App {
     }
 
     pub fn boot_to_bootrom(&mut self) -> Result<()> {
-        self.call(Self::BOOT_TO_BOOTROM)?;
-        Ok(())
+        self.call(Self::BOOT_TO_BOOTROM).map(drop)
     }
 
     pub fn uuid(&mut self) -> Result<u128> {
