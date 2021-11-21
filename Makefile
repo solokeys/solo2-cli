@@ -6,7 +6,7 @@ build:
 # for AUR things, kudos to <https://github.com/Foxboron/sbctl>
 
 push-aur:
-	cd pkg/arch; makepkg --printscr-info > .SRCINFO
+	cd pkg/arch; makepkg --printsrcinfo > .SRCINFO
 	git subtree push -P pkg/arch
 
 .PHONY: local-aur
