@@ -15,4 +15,4 @@ local-aur:
 	cd pkg/arch
 	mkdir -p ./src
 	ln -srfT $(CURDIR) ./src/solo2-cli-0.0.7
-	makepkg --holdver --syncdeps --noextract --force
+	makepkg --holdver --syncdeps --noextract --force --install

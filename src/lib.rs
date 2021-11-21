@@ -4,14 +4,14 @@
 extern crate log;
 
 pub mod apps;
+pub use apps::App;
 pub mod device;
 pub use device::{Device, Solo2};
-#[cfg(feature = "dev-pki")]
-pub mod dev_pki;
 pub mod error;
 pub use error::{Error, Result};
 pub mod firmware;
 pub use firmware::{Firmware, Version};
+pub mod pki;
 pub mod smartcard;
 pub use smartcard::Smartcard;
 pub use lpc55::{UuidSelectable, uuid::Uuid};

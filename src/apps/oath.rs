@@ -1,27 +1,15 @@
 use core::fmt;
 
 use anyhow::anyhow;
-use flexiber::{Encodable, TaggedSlice};
+use flexiber::{Decodable, Encodable, TaggedSlice};
 
-use crate::{apps::App as _, Card, Error, Result};
+use crate::{App as _, Error, Result};
 
-pub struct App {
-    pub card: Card,
-}
+app_boilerplate!();
 
-impl super::App for App {
+impl crate::App for App {
     const RID: &'static [u8] = super::YUBICO_RID;
     const PIX: &'static [u8] = super::OATH_PIX;
-
-    fn new(uuid: Option<[u8; 16]>) -> Result<Self> {
-        Ok(Self {
-            card: Self::connect(uuid)?,
-        })
-    }
-
-    fn card(&mut self) -> &mut Card {
-        &mut self.card
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -196,9 +184,10 @@ impl Credential {
     }
 
     pub fn key(&self) -> Vec<u8> {
-        let mut key = Vec::new();
-        key.push((u8::from(&self.kind) << 4) + self.algorithm as u8);
-        key.push(self.digits);
+        let mut key = vec![
+            (u8::from(&self.kind) << 4) + self.algorithm as u8,
+            self.digits,
+        ];
         key.extend_from_slice(&self.secret.0);
 
         key
@@ -275,7 +264,7 @@ pub enum Instruction {
     Calculate = 0xA2,
 }
 
-impl flexiber::Encodable for Tag {
+impl Encodable for Tag {
     fn encoded_length(&self) -> flexiber::Result<flexiber::Length> {
         Ok(1u8.into())
     }
@@ -284,7 +273,7 @@ impl flexiber::Encodable for Tag {
     }
 }
 
-impl flexiber::Decodable<'_> for Tag {
+impl Decodable<'_> for Tag {
     fn decode(decoder: &mut flexiber::Decoder<'_>) -> flexiber::Result<Self> {
         use flexiber::TagLike;
         let simple_tag: flexiber::SimpleTag = decoder.decode()?;
@@ -467,7 +456,7 @@ impl TryFrom<&clap::ArgMatches<'_>> for Command {
             let credential = Credential {
                 label: args.value_of("label").unwrap().to_string(),
                 issuer: args.value_of("issuer").map(str::to_string),
-                secret: Secret::from_base32(&args.value_of("secret").unwrap(), digest)?,
+                secret: Secret::from_base32(args.value_of("secret").unwrap(), digest)?,
                 kind,
                 algorithm: digest,
                 digits: args.value_of("digits").unwrap().parse().unwrap(),

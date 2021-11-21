@@ -20,18 +20,18 @@ anyhow = "1.0.40"
 chrono = "0.4.19"
 # ctap-hid-fido2 = "2.1.1"
 data-encoding = "2.3.2"
-# flexiber = { git = "https://github.com/nickray/flexiber", branch = "main", features = ["std"] }
+flexiber = { version = "0.1.0", features = ["std"] }
 hex = "0.4.3"
 hex-literal = "0.3.1"
 iso7816 = "0.1.0-alpha.0"
-# lpc55 = { path = "../lpc55-host", version = "0.1.0-alpha.7" }
-lpc55 = { git = "https://github.com/lpc55/lpc55-host", branch = "win-fix" }
+lpc55 = { path = "../lpc55-host", version = "0.1.0-alpha.8" }
 pcsc = "2.4.0"
 # reqwest = { version = "0.11", features = ["json"] }
 rust-crypto = "^0.2"
 serde_json = "1.0.64"
 sha-1 = "0.9.6"
 sha2 = "0.9.5"
+x509-parser = { version = "0.12.0", features = ["verify"] }
 
 # download
 dialoguer = "0.8.0"
@@ -39,6 +39,7 @@ indicatif = "0.16.2"
 ureq = { version = "2.1.1", features = ["json"] }
 
 # cli
+atty = { version = "0.2.14", optional = true }
 clap = { version = "2.33.3", optional = true }
 ctrlc = { version = "3.2.0", optional = true }
 lazy_static = { version = "1.4.0", optional = true }
@@ -58,5 +59,9 @@ lazy_static = "1.4.0"
 
 [features]
 default = ["cli"]
-cli = ["clap", "ctrlc", "lazy_static", "pretty_env_logger"]
+cli = ["atty", "clap", "ctrlc", "lazy_static", "pretty_env_logger"]
 dev-pki = ["p256", "pkcs8", "rand_core", "rcgen", "yasna"]
+# It's not allowed to use the network when building for docs.rs, and the same
+# for most corporate networks. The tests behind this flag do things like downloading
+# certificates from Solo 2 PKI public data.
+network-tests = []

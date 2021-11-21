@@ -168,22 +168,20 @@ impl Device {
                 info!("current device version: {}", device_version.to_calver());
                 info!("new firmware version: {}", new_version.to_calver());
 
-                if !skip_major_prompt {
-                    if new_version.major > device_version.major {
-                        use dialoguer::{theme, Confirm};
-                        println!("Warning: This is is major update and it could risk breaking any current credentials on your key.");
-                        println!("Check latest release notes here to double check: https://github.com/solokeys/solo2/releases");
-                        println!("If you haven't used your key for anything yet, you can ignore this.\n");
+                if !skip_major_prompt && new_version.major > device_version.major {
+                    use dialoguer::{theme, Confirm};
+                    println!("Warning: This is is major update and it could risk breaking any current credentials on your key.");
+                    println!("Check latest release notes here to double check: https://github.com/solokeys/solo2/releases");
+                    println!("If you haven't used your key for anything yet, you can ignore this.\n");
 
-                        if Confirm::with_theme(&theme::ColorfulTheme::default())
-                            .with_prompt("Continue?")
-                            .wait_for_newline(true)
-                            .interact()?
-                        {
-                            println!("Continuing");
-                        } else {
-                            return Err(anyhow!("User aborted."));
-                        }
+                    if Confirm::with_theme(&theme::ColorfulTheme::default())
+                        .with_prompt("Continue?")
+                        .wait_for_newline(true)
+                        .interact()?
+                    {
+                        println!("Continuing");
+                    } else {
+                        return Err(anyhow!("User aborted."));
                     }
                 }
 

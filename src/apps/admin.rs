@@ -1,11 +1,10 @@
 use lpc55::secure_binary::Version;
 
-use super::App as _;
-use crate::{Smartcard, Result, Uuid};
+use crate::{App as _, Result, Uuid};
 
 app_boilerplate!();
 
-impl super::App for App {
+impl crate::App for App {
     const RID: &'static [u8] = super::SOLOKEYS_RID;
     const PIX: &'static [u8] = super::ADMIN_PIX;
 }

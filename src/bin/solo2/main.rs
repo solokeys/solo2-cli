@@ -80,7 +80,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 app.boot_to_bootrom().ok();
 
                 println!("Tap button on key to reboot, or replug to abort...");
-                while !Bootloader::having(uuid).is_ok() {
+                while Bootloader::having(uuid).is_err() {
                     std::thread::sleep(std::time::Duration::from_secs(5));
                 }
                 println!("...rebooted");
@@ -249,18 +249,34 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             "Compile with `--features dev-pki` for dev PKI support!"
         ));
     }
-    #[cfg(feature = "dev-pki")]
-    if let Some(args) = args.subcommand_matches("dev-pki") {
-        if let Some(args) = args.subcommand_matches("fido") {
-            let (aaguid, key_trussed, key_pem, cert) = solo2::dev_pki::generate_selfsigned_fido();
+    if let Some(args) = args.subcommand_matches("pki") {
+        if let Some(args) = args.subcommand_matches("ca") {
+            if let Some(args) = args.subcommand_matches("fetch-certificate") {
+                use std::io::{stdout, Write as _};
+                let authority: solo2::pki::Authority = args.value_of("AUTHORITY").unwrap().try_into()?;
+                let certificate = solo2::pki::fetch_certificate(authority)?;
+                if atty::is(atty::Stream::Stdout) {
+                    eprintln!("Some things to do with the DER data");
+                    eprintln!("* redirect to a file: `> {:?}.der", &authority.name().to_lowercase());
+                    eprintln!("* inspect contents by piping to step: `| step certificate inspect");
+                    return Err(anyhow::anyhow!("Refusing to write binary data to stdout"));
+                }
+                stdout().write_all(certificate.der())?;
+            }
+        }
+        #[cfg(feature = "dev-pki")]
+        if let Some(args) = args.subcommand_matches("dev") {
+            if let Some(args) = args.subcommand_matches("fido") {
+                let (aaguid, key_trussed, key_pem, cert) = solo2::pki::dev::generate_selfsigned_fido();
 
-            info!("\n{}", key_pem);
-            info!("\n{}", cert.serialize_pem()?);
+                info!("\n{}", key_pem);
+                info!("\n{}", cert.serialize_pem()?);
 
-            std::fs::write(args.value_of("KEY").unwrap(), &key_trussed)?;
-            std::fs::write(args.value_of("CERT").unwrap(), &cert.serialize_der()?)?;
+                std::fs::write(args.value_of("KEY").unwrap(), &key_trussed)?;
+                std::fs::write(args.value_of("CERT").unwrap(), &cert.serialize_der()?)?;
 
-            println!("{}", hex::encode_upper(aaguid));
+                println!("{}", hex::encode_upper(aaguid));
+            }
         }
     }
 
