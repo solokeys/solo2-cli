@@ -14,29 +14,29 @@ macro_rules! app_boilerplate(
     () => {
 
         pub struct App {
-            pub card: Smartcard,
+            pub card: $crate::Smartcard,
         }
 
-        impl From<Smartcard> for App {
-            fn from(card: Smartcard) -> Self {
+        impl From<$crate::Smartcard> for App {
+            fn from(card: $crate::Smartcard) -> Self {
                 Self { card }
             }
         }
 
-        impl From<App> for Smartcard {
+        impl From<App> for $crate::Smartcard {
             fn from(app: App) -> Self {
                 app.card
             }
         }
 
-        impl AsRef<Smartcard> for App {
-            fn as_ref(&self) -> &Smartcard {
+        impl AsRef<$crate::Smartcard> for App {
+            fn as_ref(&self) -> &$crate::Smartcard {
                 &self.card
             }
         }
 
-        impl AsMut<Smartcard> for App {
-            fn as_mut(&mut self) -> &mut Smartcard {
+        impl AsMut<$crate::Smartcard> for App {
+            fn as_mut(&mut self) -> &mut $crate::Smartcard {
                 &mut self.card
             }
         }
@@ -45,7 +45,7 @@ macro_rules! app_boilerplate(
 
 pub mod admin;
 pub mod ndef;
-// pub mod oath;
+pub mod oath;
 // pub mod piv;
 pub mod provisioner;
 pub mod tester;

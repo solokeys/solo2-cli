@@ -1,11 +1,10 @@
 use iso7816::Instruction;
 
-use super::App as _;
-use crate::{Smartcard, Result};
+use crate::{App as _, Result};
 
 app_boilerplate!();
 
-impl super::App for App {
+impl crate::App for App {
     const RID: &'static [u8] = super::NFC_FORUM_RID;
     const PIX: &'static [u8] = super::NDEF_PIX;
 }

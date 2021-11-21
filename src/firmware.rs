@@ -19,11 +19,18 @@ impl Firmware {
         self.version
     }
 
+    // TODO: To implement this, upstream `lpc55` library needs to gain support
+    // for decoding signed SB2.1 files.
+    //
+    // /// Returns Ok if the firmware has a valid signature.
+    // pub fn verify(&self) -> Result<()> {
+    // }
+
     pub fn write_to(&self, bootloader: &lpc55::Bootloader) {
         bootloader.receive_sb_file(&self.content);
     }
 
-    /// This is somewhat useless, we should instead verify the signatures on the SB2.1 file.
+    /// This is not the best we can do; should instead verify the Firmware data is valid, and the signatures verify against [`R1`][crate::pki::Authority::R1].
     pub fn verify_hexhash(&self, sha256_hex_hash: &str) -> Result<()> {
         use crypto::digest::Digest;
         use crypto::sha2::Sha256;
@@ -56,20 +63,3 @@ impl Firmware {
     }
 
 }
-
-// // A rather tolerant update function, intended to be used by end users.
-// pub fn run_update_procedure(
-//     device: Device,
-//     sbfilepath: Option<String>,
-//     skip_major_prompt: bool,
-// ) -> Result<()> {
-
-//     let firmware: Firmware = sbfilepath
-//         .map(Firmware::read_from_file)
-//         .unwrap_or_else(|| {
-//             println!("Downloading latest release from https://github.com/solokeys/solo2/");
-//             Firmware::download_latest()
-//         })?;
-
-//     firmware.program(device, skip_major_prompt)
-// }
