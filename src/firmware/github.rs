@@ -66,7 +66,8 @@ impl Release {
         let tag: String = from_value(response["tag_name"].clone())?;
 
         let assets: Vec<Value> = from_value(response["assets"].clone())?;
-        let assets: Vec<AssetSpec> = assets.into_iter()
+        let assets: Vec<AssetSpec> = assets
+            .into_iter()
             .map(AssetSpec::try_from)
             .filter_map(|x| x.ok())
             .collect();
@@ -98,4 +99,3 @@ impl Release {
         Ok(firmware)
     }
 }
-

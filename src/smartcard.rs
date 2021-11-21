@@ -38,7 +38,9 @@ impl Service {
 
     /// Establishes a user session with the PCSC service, if available.
     pub fn user_session() -> Result<Self> {
-        Ok(Self { session:  pcsc::Context::establish(Scope::User)? })
+        Ok(Self {
+            session: pcsc::Context::establish(Scope::User)?,
+        })
     }
 
     /// Get a connection to a smartcard by name.
@@ -48,7 +50,9 @@ impl Service {
     pub fn connect(&self, smartcard_name: &str) -> Result<Smartcard> {
         let cstring = std::ffi::CString::new(smartcard_name.as_bytes()).unwrap();
         Ok(Smartcard {
-            card: self.session.connect(&cstring, ShareMode::Shared, Protocols::ANY)?,
+            card: self
+                .session
+                .connect(&cstring, ShareMode::Shared, Protocols::ANY)?,
             name: smartcard_name.to_string(),
         })
     }
@@ -59,7 +63,9 @@ impl Service {
     /// that cards with weird non-UTF8 names won't be addressable.
     pub fn smartcard_names(&self) -> Result<Vec<String>> {
         let mut card_names_buffer = vec![0; self.session.list_readers_len()?];
-        let names = self.session.list_readers(&mut card_names_buffer)?
+        let names = self
+            .session
+            .list_readers(&mut card_names_buffer)?
             .map(|name_cstr| name_cstr.to_string_lossy().to_string())
             .collect();
         Ok(names)
@@ -67,11 +73,11 @@ impl Service {
 
     /// Get all of the usable smartcards in the system.
     pub fn smartcards(&self) -> Result<Vec<Smartcard>> {
-        Ok(self.smartcard_names()?
-           .iter()
-           .filter_map(|name| self.connect(name).ok())
-           .collect()
-       )
+        Ok(self
+            .smartcard_names()?
+            .iter()
+            .filter_map(|name| self.connect(name).ok())
+            .collect())
     }
 }
 
@@ -99,22 +105,20 @@ impl fmt::Display for Smartcard {
 
 impl UuidSelectable for Smartcard {
     fn try_uuid(&mut self) -> Result<Uuid> {
-
         let mut aid: Vec<u8> = Default::default();
         aid.extend_from_slice(apps::SOLOKEYS_RID);
         aid.extend_from_slice(apps::ADMIN_PIX);
 
         self.call(
-            0, iso7816::Instruction::Select.into(),
-            0x04, 0x00,
+            0,
+            iso7816::Instruction::Select.into(),
+            0x04,
+            0x00,
             Some(&aid),
         )?;
 
-        let uuid_bytes: [u8; 16] = self.call(
-            0, apps::admin::App::UUID_COMMAND,
-            0x00, 0x00,
-            None,
-        )?
+        let uuid_bytes: [u8; 16] = self
+            .call(0, apps::admin::App::UUID_COMMAND, 0x00, 0x00, None)?
             .try_into()
             .map_err(|_| anyhow!("Did not read 16 byte uuid from mgmt app."))?;
 
@@ -139,13 +143,23 @@ impl UuidSelectable for Smartcard {
         let device = Device::having(uuid)?;
         match device {
             Device::Solo2(solo2) => Ok(solo2.into_inner()),
-            _ => Err(anyhow!("No smartcard found with UUID {:X}", uuid.to_simple())),
+            _ => Err(anyhow!(
+                "No smartcard found with UUID {:X}",
+                uuid.to_simple()
+            )),
         }
     }
 }
 
 impl Smartcard {
-    pub fn call(&mut self, cla: u8, ins: u8, p1: u8, p2: u8, data: Option<&[u8]>) -> Result<Vec<u8>> {
+    pub fn call(
+        &mut self,
+        cla: u8,
+        ins: u8,
+        p1: u8,
+        p2: u8,
+        data: Option<&[u8]>,
+    ) -> Result<Vec<u8>> {
         let data = data.unwrap_or(&[]);
         let mut send_buffer = Vec::<u8>::with_capacity(data.len() + 16);
 
@@ -207,4 +221,3 @@ impl Smartcard {
         Ok(recv_buffer)
     }
 }
-

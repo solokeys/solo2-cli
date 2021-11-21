@@ -13,5 +13,5 @@ pub mod firmware;
 pub use firmware::{Firmware, Version};
 pub mod pki;
 pub mod smartcard;
+pub use lpc55::{uuid::Uuid, UuidSelectable};
 pub use smartcard::Smartcard;
-pub use lpc55::{UuidSelectable, uuid::Uuid};

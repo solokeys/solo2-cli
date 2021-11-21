@@ -4,7 +4,7 @@ use hex_literal::hex;
 use lpc55::UuidSelectable;
 
 // use crate::device::{prompt_user_to_select_device, Device};
-use crate::{Smartcard, Result, Uuid};
+use crate::{Result, Smartcard, Uuid};
 
 /// This feels totally boilerplatey, didn't think hard about how to reformulate yet.
 ///
@@ -65,7 +65,9 @@ pub const PIV_PIX: &[u8] = &hex!("00001000");
 pub const PROVISIONER_PIX: &[u8] = &hex!("01000001");
 pub const TESTER_PIX: &[u8] = &hex!("01000000");
 
-pub trait App: AsRef<Smartcard> + AsMut<Smartcard> + From<Smartcard> + Into<Smartcard> + Sized {
+pub trait App:
+    AsRef<Smartcard> + AsMut<Smartcard> + From<Smartcard> + Into<Smartcard> + Sized
+{
     const RID: &'static [u8];
     const PIX: &'static [u8];
 
@@ -119,4 +121,3 @@ pub trait App: AsRef<Smartcard> + AsMut<Smartcard> + From<Smartcard> + Into<Smar
         println!("{}", hex::encode(Self::aid()).to_uppercase());
     }
 }
-

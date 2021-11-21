@@ -20,19 +20,31 @@ fn main() {
 }
 
 /// description: plural of thing to be selected, e.g. "Solo 2 devices"
-pub fn interactively_select<T: core::fmt::Display>(candidates: Vec<T>, description: &str) -> anyhow::Result<T> {
+pub fn interactively_select<T: core::fmt::Display>(
+    candidates: Vec<T>,
+    description: &str,
+) -> anyhow::Result<T> {
     let mut candidates = match candidates.len() {
         0 => return Err(anyhow!("Empty list of {}", description)),
-        1 => { let mut candidates = candidates; return Ok(candidates.remove(0)) }
-        _ => candidates
+        1 => {
+            let mut candidates = candidates;
+            return Ok(candidates.remove(0));
+        }
+        _ => candidates,
     };
 
-    let items: Vec<String> = candidates.iter().map(|candidate| format!("{}", &candidate)).collect();
+    let items: Vec<String> = candidates
+        .iter()
+        .map(|candidate| format!("{}", &candidate))
+        .collect();
 
     use dialoguer::{theme, Select};
     // let selection = Select::with_theme(&theme::SimpleTheme)
     let selection = Select::with_theme(&theme::ColorfulTheme::default())
-        .with_prompt(format!("Multiple {} available, select one or hit Escape key", description))
+        .with_prompt(format!(
+            "Multiple {} available, select one or hit Escape key",
+            description
+        ))
         .items(&items)
         .default(0)
         .interact_opt()?
@@ -41,7 +53,10 @@ pub fn interactively_select<T: core::fmt::Display>(candidates: Vec<T>, descripti
     Ok(candidates.remove(selection))
 }
 
-pub fn unwrap_or_interactively_select<T: core::fmt::Display + UuidSelectable>(uuid: Option<Uuid>, description: &str) -> anyhow::Result<T> {
+pub fn unwrap_or_interactively_select<T: core::fmt::Display + UuidSelectable>(
+    uuid: Option<Uuid>,
+    description: &str,
+) -> anyhow::Result<T> {
     let thing = match uuid {
         Some(uuid) => T::having(uuid)?,
         None => interactively_select(T::list(), description)?,
@@ -254,11 +269,15 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
         if let Some(args) = args.subcommand_matches("ca") {
             if let Some(args) = args.subcommand_matches("fetch-certificate") {
                 use std::io::{stdout, Write as _};
-                let authority: solo2::pki::Authority = args.value_of("AUTHORITY").unwrap().try_into()?;
+                let authority: solo2::pki::Authority =
+                    args.value_of("AUTHORITY").unwrap().try_into()?;
                 let certificate = solo2::pki::fetch_certificate(authority)?;
                 if atty::is(atty::Stream::Stdout) {
                     eprintln!("Some things to do with the DER data");
-                    eprintln!("* redirect to a file: `> {:?}.der", &authority.name().to_lowercase());
+                    eprintln!(
+                        "* redirect to a file: `> {:?}.der",
+                        &authority.name().to_lowercase()
+                    );
                     eprintln!("* inspect contents by piping to step: `| step certificate inspect");
                     return Err(anyhow::anyhow!("Refusing to write binary data to stdout"));
                 }
@@ -268,7 +287,8 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
         #[cfg(feature = "dev-pki")]
         if let Some(args) = args.subcommand_matches("dev") {
             if let Some(args) = args.subcommand_matches("fido") {
-                let (aaguid, key_trussed, key_pem, cert) = solo2::pki::dev::generate_selfsigned_fido();
+                let (aaguid, key_trussed, key_pem, cert) =
+                    solo2::pki::dev::generate_selfsigned_fido();
 
                 info!("\n{}", key_pem);
                 info!("\n{}", cert.serialize_pem()?);
@@ -312,12 +332,13 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
         use solo2::Firmware;
 
-        let firmware: Firmware = sb2_filepath
-            .map(Firmware::read_from_file)
-            .unwrap_or_else(|| {
-                println!("Downloading latest release from https://github.com/solokeys/solo2/");
-                Firmware::download_latest()
-            })?;
+        let firmware: Firmware =
+            sb2_filepath
+                .map(Firmware::read_from_file)
+                .unwrap_or_else(|| {
+                    println!("Downloading latest release from https://github.com/solokeys/solo2/");
+                    Firmware::download_latest()
+                })?;
 
         if update_all {
             for device in Device::list() {
@@ -345,5 +366,6 @@ fn restore_cursor_on_ctrl_c() {
         term.show_cursor().ok();
         // Ctrl-C exit code = 130
         std::process::exit(130);
-    }).ok();
+    })
+    .ok();
 }
