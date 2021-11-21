@@ -6,8 +6,7 @@ build:
 # for AUR things, kudos to <https://github.com/Foxboron/sbctl>
 
 push-aur:
-	cd pkg/arch; makepkg --printsrcinfo > .SRCINFO
-	git subtree push -P pkg/arch
+	git subtree push -P pkg/arch ssh://aur@aur.archlinux.org/solo2-cli.git master
 
 .PHONY: local-aur
 .ONESHELL:
