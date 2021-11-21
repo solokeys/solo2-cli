@@ -5,7 +5,7 @@ mod cli;
 
 use anyhow::anyhow;
 use lpc55::bootloader::{Bootloader, UuidSelectable};
-use solo2::{Device, Smartcard, Uuid};
+use solo2::{Device, Uuid};
 
 fn main() {
     pretty_env_logger::init_custom_env("SOLO2_LOG");
@@ -122,11 +122,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let card = match uuid {
-                Some(uuid) => Smartcard::having(uuid)?,
-                None => interactively_select(Smartcard::list(), "smartcards")?,
-            };
-
+            let card = unwrap_or_interactively_select(uuid, "smartcards")?;
             let mut app = NdefApp::with(card);
             app.select()?;
 
@@ -318,6 +314,9 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(_args) = args.subcommand_matches("list") {
+        if !solo2::smartcard::Service::is_available() {
+            return Err(anyhow::anyhow!("There is no PCSC service running"));
+        }
         let devices = solo2::Device::list();
         for device in devices {
             println!("{}", &device);
@@ -325,6 +324,9 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(args) = args.subcommand_matches("update") {
+        if !solo2::smartcard::Service::is_available() {
+            return Err(anyhow::anyhow!("There is no PCSC service running"));
+        }
         let skip_major_prompt = args.is_present("yes");
         let update_all = args.is_present("all");
 
