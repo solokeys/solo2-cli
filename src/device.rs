@@ -2,7 +2,7 @@
 use anyhow::anyhow;
 use lpc55::bootloader::{Bootloader, UuidSelectable};
 
-use crate::{Error, Firmware, Result, Smartcard, Uuid};
+use crate::{Error, Firmware, Result, Smartcard, Uuid, Version};
 use core::fmt;
 
 /// A [SoloKeys][solokeys] [Solo 2][solo2] device, in regular mode.
@@ -17,6 +17,7 @@ use core::fmt;
 pub struct Solo2 {
     card: Smartcard,
     uuid: Uuid,
+    version: Version,
 }
 
 impl fmt::Debug for Solo2 {
@@ -32,7 +33,7 @@ impl fmt::Debug for Solo2 {
 
 impl fmt::Display for Solo2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Solo 2 {:X}", &self.uuid.to_simple())
+        write!(f, "Solo 2 {:X} (firmware {})", &self.uuid.to_simple(), &self.version().to_calver())
     }
 }
 
@@ -51,8 +52,14 @@ impl UuidSelectable for Solo2 {
 }
 
 impl Solo2 {
+    /// UUID of device.
     pub fn uuid(&self) -> Uuid {
         self.uuid
+    }
+
+    /// Firmware version on device.
+    pub fn version(&self) -> Version {
+        self.version
     }
 
     pub fn into_inner(self) -> Smartcard {
@@ -85,7 +92,12 @@ impl TryFrom<Smartcard> for Solo2 {
     fn try_from(card: Smartcard) -> Result<Solo2> {
         let mut card = card;
         let uuid = card.try_uuid()?;
-        Ok(Solo2 { card, uuid })
+
+        use crate::App as _;
+        let mut app = crate::apps::admin::App::with(card);
+        app.select()?;
+        let version = app.version()?;
+        Ok(Solo2 { card: app.into_inner(), uuid, version })
     }
 }
 
@@ -103,7 +115,7 @@ impl fmt::Display for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Device::*;
         match self {
-            Bootloader(bootloader) => bootloader.fmt(f),
+            Bootloader(bootloader) => write!(f, "LPC 55 {:X}", Uuid::from_u128(bootloader.uuid).to_simple()),
             Solo2(solo2) => solo2.fmt(f),
         }
     }
@@ -161,7 +173,7 @@ impl Device {
     }
 
     pub fn program(self, firmware: Firmware, skip_major_prompt: bool) -> Result<()> {
-        use crate::{apps::App as _, Version};
+        use crate::App as _;
 
         let bootloader = match self {
             Device::Bootloader(bootloader) => bootloader,
@@ -197,22 +209,16 @@ impl Device {
 
                 // ignore errors based on dropped connection
                 // TODO: should we raise others?
+                // prompt first - on Windows, app call doesn't return immediately
+                println!("Tap button on key to confirm, or replug to abort...");
                 admin.boot_to_bootrom().ok();
 
-                println!("Waiting for key to enter bootloader mode...");
-
-                // Wait for new bootloader to enumerate
-                std::thread::sleep(std::time::Duration::from_millis(100));
-
-                info!("attempt {}", 0);
+                // Wait for owner to tap device, and then the bootloader to enumerate
+                std::thread::sleep(std::time::Duration::from_millis(1000));
                 let mut bootloader = Bootloader::having(uuid);
-
-                let mut attempts: i32 = 10;
-                while bootloader.is_err() && attempts > 0 {
-                    info!("attempt {}", 11 - attempts);
-                    std::thread::sleep(std::time::Duration::from_millis(100));
+                while bootloader.is_err() {
+                    std::thread::sleep(std::time::Duration::from_millis(1000));
                     bootloader = Bootloader::having(uuid);
-                    attempts -= 1;
                 }
 
                 bootloader?

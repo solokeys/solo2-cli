@@ -5,6 +5,10 @@ default_job = "check-bin"
 
 [jobs]
 
+[jobs.build]
+command = ["cargo", "build", "--color", "always"]
+need_stdout = false
+
 [jobs.check-bin]
 command = ["cargo", "check", "--features", "cli", "--bin", "solo2", "--color", "always"]
 need_stdout = false

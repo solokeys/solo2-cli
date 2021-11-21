@@ -17,6 +17,10 @@ impl App {
 
     /// Reboot the Solo 2 to bootloader mode.
     ///
+    /// NOTE: This command requires user confirmation (by tapping the device).
+    /// Current firmware implementation has no timeout, so if the user aborts
+    /// the operation host-side, the device is "stuck" until replug.
+    ///
     /// Rebooting can cause the connection to return error, which should
     /// be special-cased by the caller.
     pub fn boot_to_bootrom(&mut self) -> Result<()> {
