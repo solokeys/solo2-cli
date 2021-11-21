@@ -90,11 +90,12 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
             if args.subcommand_matches("boot-to-bootrom").is_some() {
                 let uuid = app.uuid()?;
+                // prompt first - on Windows, app call doesn't return immediately
+                println!("Tap button on key to reboot, or replug to abort...");
                 // ignore errors based on dropped connection
                 // TODO: should we raise others?
                 app.boot_to_bootrom().ok();
 
-                println!("Tap button on key to reboot, or replug to abort...");
                 while Bootloader::having(uuid).is_err() {
                     std::thread::sleep(std::time::Duration::from_secs(5));
                 }
@@ -305,10 +306,10 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             };
             bootloader.reboot();
         }
-        if args.subcommand_matches("ls").is_some() {
+        if args.subcommand_matches("list").is_some() {
             let bootloaders = Bootloader::list();
             for bootloader in bootloaders {
-                println!("{:?}", &bootloader);
+                println!("{}", &Device::Bootloader(bootloader));
             }
         }
     }
