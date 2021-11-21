@@ -39,10 +39,12 @@ impl App {
     pub fn uuid(&mut self) -> Result<Uuid> {
         let version_bytes = self.call(Self::UUID_COMMAND)?;
         let bytes: &[u8] = &version_bytes;
-        Ok(Uuid::from_u128(bytes
-            .try_into()
-            .map_err(|_| anyhow::anyhow!("expected 16 byte UUID, got {}", &hex::encode(bytes)))
-            .map(u128::from_be_bytes)?))
+        Ok(Uuid::from_u128(
+            bytes
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("expected 16 byte UUID, got {}", &hex::encode(bytes)))
+                .map(u128::from_be_bytes)?,
+        ))
     }
 
     /// The version of the [Firmware][crate::Firmware] currently running on the Solo 2.

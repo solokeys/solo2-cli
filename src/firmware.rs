@@ -61,5 +61,4 @@ impl Firmware {
         let specs = github::Release::fetch_spec()?;
         specs.fetch_firmware()
     }
-
 }

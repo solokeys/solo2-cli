@@ -21,7 +21,12 @@ pub struct Solo2 {
 
 impl fmt::Debug for Solo2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> core::result::Result<(), fmt::Error> {
-        write!(f, "Solo 2 {:X} ({})", &self.uuid.to_simple(), &self.card.name)
+        write!(
+            f,
+            "Solo 2 {:X} ({})",
+            &self.uuid.to_simple(),
+            &self.card.name
+        )
     }
 }
 
@@ -32,14 +37,14 @@ impl fmt::Display for Solo2 {
 }
 
 impl UuidSelectable for Solo2 {
-
     fn try_uuid(&mut self) -> Result<Uuid> {
         Ok(self.uuid)
     }
 
     fn list() -> Vec<Self> {
         let smartcards = Smartcard::list();
-        smartcards.into_iter()
+        smartcards
+            .into_iter()
             .filter_map(|card| Self::try_from(card).ok())
             .collect()
     }
@@ -117,14 +122,20 @@ impl UuidSelectable for Device {
 
     /// Fails is if zero or >1 devices have the given UUID.
     fn having(uuid: Uuid) -> Result<Self> {
-        let mut candidates: Vec<Device> = Self::list().into_iter().filter(|card| card.uuid() == uuid).collect();
+        let mut candidates: Vec<Device> = Self::list()
+            .into_iter()
+            .filter(|card| card.uuid() == uuid)
+            .collect();
         match candidates.len() {
             0 => Err(anyhow!("No usable device has UUID {:X}", uuid.to_simple())),
             1 => Ok(candidates.remove(0)),
-            n => Err(anyhow!("Multiple ({}) devices have UUID {:X}", n, uuid.to_simple())),
+            n => Err(anyhow!(
+                "Multiple ({}) devices have UUID {:X}",
+                n,
+                uuid.to_simple()
+            )),
         }
     }
-
 }
 
 impl Device {
@@ -150,10 +161,7 @@ impl Device {
     }
 
     pub fn program(self, firmware: Firmware, skip_major_prompt: bool) -> Result<()> {
-        use crate::{
-            apps::App as _,
-            Version,
-        };
+        use crate::{apps::App as _, Version};
 
         let bootloader = match self {
             Device::Bootloader(bootloader) => bootloader,
@@ -172,7 +180,9 @@ impl Device {
                     use dialoguer::{theme, Confirm};
                     println!("Warning: This is is major update and it could risk breaking any current credentials on your key.");
                     println!("Check latest release notes here to double check: https://github.com/solokeys/solo2/releases");
-                    println!("If you haven't used your key for anything yet, you can ignore this.\n");
+                    println!(
+                        "If you haven't used your key for anything yet, you can ignore this.\n"
+                    );
 
                     if Confirm::with_theme(&theme::ColorfulTheme::default())
                         .with_prompt("Continue?")

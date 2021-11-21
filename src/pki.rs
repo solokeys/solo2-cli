@@ -127,7 +127,7 @@ pub struct Certificate {
 impl Certificate {
     pub fn try_from_der(der: &[u8]) -> Result<Self> {
         use x509_parser::traits::FromDer;
-        X509Certificate::from_der(der)?.1;
+        X509Certificate::from_der(der)?;
         Ok(Self { der: der.to_vec() })
     }
 
@@ -161,22 +161,22 @@ pub fn fetch_certificate(authority: Authority) -> Result<Certificate> {
     Certificate::try_from_der(&der)
 }
 
-#[cfg(all(test, feature="network-tests"))]
+#[cfg(all(test, feature = "network-tests"))]
 mod test {
     use super::*;
 
     #[test]
     fn urls() {
-        assert_eq!(authority_information_access(Authority::R1), "http://i.s2pki.net/r1/");
+        assert_eq!(
+            authority_information_access(Authority::R1),
+            "http://i.s2pki.net/r1/"
+        );
     }
 
     #[test]
     fn r1() {
         let r1 = fetch_certificate(Authority::R1).unwrap();
-        assert_eq!(
-            r1.der(),
-            include_bytes!("../data/r1.der"),
-        );
+        assert_eq!(r1.der(), include_bytes!("../data/r1.der"),);
     }
 
     #[test]
@@ -187,11 +187,7 @@ mod test {
         let r1_pubkey = Some(r1.public_key());
         let t1 = fetch_certificate(Authority::T1).unwrap();
         let t2 = fetch_certificate(Authority::T2).unwrap();
-        assert!(t1.certificate()
-            .verify_signature(r1_pubkey)
-            .is_ok());
-        assert!(t2.certificate()
-            .verify_signature(r1_pubkey)
-            .is_ok());
+        assert!(t1.certificate().verify_signature(r1_pubkey).is_ok());
+        assert!(t2.certificate().verify_signature(r1_pubkey).is_ok());
     }
 }
