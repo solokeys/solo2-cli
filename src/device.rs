@@ -33,7 +33,12 @@ impl fmt::Debug for Solo2 {
 
 impl fmt::Display for Solo2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Solo 2 {:X} (firmware {})", &self.uuid.to_simple(), &self.version().to_calver())
+        write!(
+            f,
+            "Solo 2 {:X} (firmware {})",
+            &self.uuid.to_simple(),
+            &self.version().to_calver()
+        )
     }
 }
 
@@ -97,7 +102,11 @@ impl TryFrom<Smartcard> for Solo2 {
         let mut app = crate::apps::admin::App::with(card);
         app.select()?;
         let version = app.version()?;
-        Ok(Solo2 { card: app.into_inner(), uuid, version })
+        Ok(Solo2 {
+            card: app.into_inner(),
+            uuid,
+            version,
+        })
     }
 }
 
@@ -115,7 +124,11 @@ impl fmt::Display for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Device::*;
         match self {
-            Bootloader(bootloader) => write!(f, "LPC 55 {:X}", Uuid::from_u128(bootloader.uuid).to_simple()),
+            Bootloader(bootloader) => write!(
+                f,
+                "LPC 55 {:X}",
+                Uuid::from_u128(bootloader.uuid).to_simple()
+            ),
             Solo2(solo2) => solo2.fmt(f),
         }
     }

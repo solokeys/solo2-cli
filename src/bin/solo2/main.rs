@@ -343,7 +343,10 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                     Firmware::download_latest()
                 })?;
 
-        println!("Fetched firmware version {}", &firmware.version().to_calver());
+        println!(
+            "Fetched firmware version {}",
+            &firmware.version().to_calver()
+        );
 
         if update_all {
             for device in Device::list() {
