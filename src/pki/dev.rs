@@ -3,7 +3,6 @@
 //! In particular, there is no root CA, no use of hardware keys / PKCS #11,
 //! no revocation, etc. etc.
 
-use pkcs8::FromPrivateKey as _;
 use rand_core::{OsRng, RngCore};
 
 #[repr(u16)]
@@ -45,8 +44,8 @@ pub fn generate_selfsigned_fido() -> ([u8; 16], [u8; 36], String, rcgen::Certifi
     let key_pkcs8 = keypair.serialize_der();
     let key_pem = keypair.serialize_pem();
 
-    let key_doc = pkcs8::PrivateKeyDocument::from_der(key_pkcs8.as_ref()).unwrap();
-    let key_info = key_doc.private_key_info();
+    let key_info: p256::pkcs8::PrivateKeyInfo = key_pkcs8.as_slice().try_into().unwrap();
+    use p256::pkcs8::FromPrivateKey;
     let secret_key: [u8; 32] = p256::SecretKey::from_pkcs8_private_key_info(key_info)
         .unwrap()
         .to_bytes()
