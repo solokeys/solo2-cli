@@ -125,35 +125,36 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             }
         }
 
-        // if let Some(args) = args.subcommand_matches("oath") {
-        //     info!("interacting with OATH app");
-        //     use solo2::apps::oath::{App, Command};
-        //     if args.subcommand_matches("aid").is_some() {
-        //         App::print_aid();
-        //         return Ok(());
-        //     }
+        if let Some(args) = args.subcommand_matches("oath") {
+            info!("interacting with OATH app");
+            use solo2::apps::oath::{App, Command};
+            if args.subcommand_matches("aid").is_some() {
+                App::print_aid();
+                return Ok(());
+            }
 
-        //     let mut app = App::new(uuid)?;
-        //     app.select()?;
+            let card = unwrap_or_interactively_select(uuid, "smartcards")?;
+            let mut app = App::with(card);
+            app.select()?;
 
-        //     let command: Command = Command::try_from(args)?;
+            let command: Command = Command::try_from(args)?;
 
-        //     match command {
-        //         Command::Register(register) => {
-        //             let credential_id = app.register(register)?;
-        //             println!("{}", credential_id);
-        //         }
-        //         Command::Authenticate(authenticate) => {
-        //             let code = app.authenticate(authenticate)?;
-        //             println!("{}", code);
-        //         }
-        //         Command::Delete(label) => {
-        //             app.delete(label)?;
-        //         }
-        //         Command::List => app.list()?,
-        //         Command::Reset => app.reset()?,
-        //     }
-        // }
+            match command {
+                Command::Register(register) => {
+                    let credential_id = app.register(register)?;
+                    println!("{}", credential_id);
+                }
+                Command::Authenticate(authenticate) => {
+                    let code = app.authenticate(authenticate)?;
+                    println!("{}", code);
+                }
+                Command::Delete(label) => {
+                    app.delete(label)?;
+                }
+                Command::List => app.list()?,
+                Command::Reset => app.reset()?,
+            }
+        }
 
         // if let Some(args) = args.subcommand_matches("piv") {
         //     info!("interacting with PIV app");
