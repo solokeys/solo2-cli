@@ -238,6 +238,24 @@ pub fn cli() -> clap::App<'static, 'static> {
                                 ),
                         )
                         .subcommand(
+                            SubCommand::with_name("store-fido-batch-key")
+                                .about("Stores the FIDO batch attestation private key")
+                                .arg(
+                                    Arg::with_name("KEY")
+                                        .help("P256 private key in internal format")
+                                        .required(true),
+                                ),
+                        )
+                        .subcommand(
+                            SubCommand::with_name("store-fido-batch-cert")
+                                .about("Stores the FIDO batch attestation certificate")
+                                .arg(
+                                    Arg::with_name("CERT")
+                                        .help("Attestation certificate")
+                                        .required(true),
+                                ),
+                        )
+                        .subcommand(
                             SubCommand::with_name("reformat-filesystem")
                                 .about("Reformats the internal filesystem"),
                         )
