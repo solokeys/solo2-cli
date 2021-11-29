@@ -227,6 +227,16 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 let public_key: [u8; 32] = std::fs::read(pubkey_file)?.as_slice().try_into()?;
                 app.store_trussed_t1_intermediate_public_key(public_key)?;
             }
+            if let Some(args) = args.subcommand_matches("store-fido-batch-key") {
+                let key_file = args.value_of("KEY").unwrap();
+                let key = std::fs::read(key_file)?;
+                app.write_file(&key, "/fido/sec/00")?;
+            }
+            if let Some(args) = args.subcommand_matches("store-fido-batch-cert") {
+                let cert_file = args.value_of("CERT").unwrap();
+                let cert = std::fs::read(cert_file)?;
+                app.write_file(&cert, "/fido/x5c/00")?;
+            }
             if args.subcommand_matches("boot-to-bootrom").is_some() {
                 app.boot_to_bootrom()?;
             }
