@@ -37,7 +37,7 @@ impl fmt::Display for Solo2 {
             f,
             "Solo 2 {:X} (firmware {})",
             &self.uuid.to_simple(),
-            &self.version().to_calver()
+            &self.version().to_semver()
         )
     }
 }
@@ -198,8 +198,8 @@ impl Device {
                 let device_version: Version = admin.version()?;
                 let new_version = firmware.version();
 
-                info!("current device version: {}", device_version.to_calver());
-                info!("new firmware version: {}", new_version.to_calver());
+                info!("current device version: {}", device_version.to_semver());
+                info!("new firmware version: {}", new_version.to_semver());
 
                 if !skip_major_prompt && new_version.major > device_version.major {
                     use dialoguer::{theme, Confirm};

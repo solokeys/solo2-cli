@@ -111,7 +111,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             }
             if args.subcommand_matches("version").is_some() {
                 let version = app.version()?;
-                println!("{}", version.to_calver());
+                println!("{}", version.to_semver());
             }
         }
 
@@ -355,7 +355,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
         println!(
             "Fetched firmware version {}",
-            &firmware.version().to_calver()
+            &firmware.version().to_semver()
         );
 
         if update_all {
