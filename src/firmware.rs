@@ -32,13 +32,12 @@ impl Firmware {
 
     /// This is not the best we can do; should instead verify the Firmware data is valid, and the signatures verify against [`R1`][crate::pki::Authority::R1].
     pub fn verify_hexhash(&self, sha256_hex_hash: &str) -> Result<()> {
-        use crypto::digest::Digest;
-        use crypto::sha2::Sha256;
+        use sha2::{Digest, Sha256};
 
         let mut hasher = Sha256::new();
-        hasher.input(&self.content);
+        hasher.update(&self.content);
 
-        (hasher.result_str() == sha256_hex_hash)
+        (hex::encode(hasher.finalize()) == sha256_hex_hash)
             .then(|| ())
             .ok_or_else(|| anyhow!("Sha2 hash on downloaded firmware did not verify!"))
     }

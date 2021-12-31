@@ -1,42 +1,86 @@
 //! Solo 2 devices, which may be in regular or bootloader mode.
-use anyhow::anyhow;
-use lpc55::bootloader::{Bootloader, UuidSelectable};
+use core::sync::atomic::{AtomicBool, Ordering};
+use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{Error, Firmware, Result, Smartcard, Uuid, Version};
+use anyhow::anyhow;
+use lpc55::bootloader::{Bootloader as Lpc55, UuidSelectable};
+
+use crate::{apps::admin::App as Admin, Select as _, Firmware, Result, Uuid, Version};
 use core::fmt;
+
+pub mod ctap;
+pub mod pcsc;
 
 /// A [SoloKeys][solokeys] [Solo 2][solo2] device, in regular mode.
 ///
 /// From an inventory perspective, the core identifier is a UUID (16 bytes / 128 bits).
 ///
-/// From an interface perspective, currently only the smartcard interface is exposed and used.
-/// Soon we will add the CTAP interface, at least for rebooting into the bootloader/update mode.
+/// From an interface perspective, either the CTAP or PCSC transport must be available.
+/// Therefore, it is an invariant that at least one is interface, and the device itself
+/// implements [Transport][crate::Transport].
 ///
 /// [solokeys]: https://solokeys.com
 /// [solo2]: https://solo2.dev
 pub struct Solo2 {
-    card: Smartcard,
+    ctap: Option<ctap::Device>,
+    pcsc: Option<pcsc::Device>,
     uuid: Uuid,
     version: Version,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum TransportPreference {
+    Ctap,
+    Pcsc,
+}
+
+static PREFER_CTAP: AtomicBool = AtomicBool::new(false);
+
+impl Solo2 {
+    pub fn transport_preference() -> TransportPreference {
+        if PREFER_CTAP.load(Ordering::SeqCst) {
+            TransportPreference::Ctap
+        } else {
+            TransportPreference::Pcsc
+        }
+    }
+
+    pub fn prefer_ctap() {
+        PREFER_CTAP.store(true, Ordering::SeqCst);
+    }
+
+    pub fn prefer_pcsc() {
+        PREFER_CTAP.store(false, Ordering::SeqCst);
+    }
 }
 
 impl fmt::Debug for Solo2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> core::result::Result<(), fmt::Error> {
         write!(
             f,
-            "Solo 2 {:X} ({})",
+            "Solo 2 {:X} (CTAP: {:?}, PCSC: {:?}, Version: {} aka {})",
             &self.uuid.to_simple(),
-            &self.card.name
+            &self.ctap,
+            &self.pcsc,
+            &self.version.to_semver(),
+            &self.version.to_calver(),
         )
     }
 }
 
 impl fmt::Display for Solo2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let transports = match (self.ctap.is_some(), self.pcsc.is_some()) {
+            (true, true) => "CTAP+PCSC",
+            (true, false) => "CTAP only",
+            (false, true) => "PCSC only",
+            _ => unreachable!(),
+        };
         write!(
             f,
-            "Solo 2 {:X} (firmware {})",
+            "Solo 2 {:X} ({}, firmware {})",
             &self.uuid.to_simple(),
+            transports,
             &self.version().to_calver()
         )
     }
@@ -48,11 +92,39 @@ impl UuidSelectable for Solo2 {
     }
 
     fn list() -> Vec<Self> {
-        let smartcards = Smartcard::list();
-        smartcards
-            .into_iter()
-            .filter_map(|card| Self::try_from(card).ok())
-            .collect()
+        // iterator/lifetime woes avoiding the explicit for loop
+        let mut ctaps = BTreeMap::new();
+        for mut device in ctap::list().into_iter() {
+            if let Ok(uuid) = device.try_uuid() {
+                ctaps.insert(uuid, device);
+            }
+        }
+        // iterator/lifetime woes avoiding the explicit for loop
+        let mut pcscs = BTreeMap::new();
+        for mut device in pcsc::list().into_iter() {
+            if let Ok(uuid) = device.try_uuid() {
+                pcscs.insert(uuid, device);
+            }
+        }
+
+        let uuids = BTreeSet::from_iter(ctaps.keys().chain(pcscs.keys()).copied());
+        let mut devices = Vec::new();
+        for uuid in uuids.iter() {
+            // a bit roundabout, but hey, "it works".
+            let mut device = Self {
+                ctap: ctaps.remove(uuid),
+                pcsc: pcscs.remove(uuid),
+                uuid: *uuid,
+                version: Version { major: 0, minor: 0, patch: 0},
+            };
+            if let Ok(mut admin) = Admin::select(&mut device) {
+                if let Ok(version) = admin.version() {
+                    device.version = version;
+                    devices.push(device);
+                }
+            }
+        }
+        devices
     }
 }
 
@@ -67,56 +139,62 @@ impl Solo2 {
         self.version
     }
 
-    pub fn into_inner(self) -> Smartcard {
-        self.card
+    pub fn as_ctap(&self) -> Option<&ctap::Device> {
+        self.ctap.as_ref()
     }
 
-    pub fn as_smartcard(&self) -> &Smartcard {
-        self.as_ref()
+    pub fn as_ctap_mut(&mut self) -> Option<&mut ctap::Device> {
+        self.ctap.as_mut()
     }
 
-    pub fn as_smartcard_mut(&mut self) -> &mut Smartcard {
-        self.as_mut()
+    pub fn as_pcsc(&self) -> Option<&pcsc::Device> {
+        self.pcsc.as_ref()
     }
-}
 
-impl AsRef<Smartcard> for Solo2 {
-    fn as_ref(&self) -> &Smartcard {
-        &self.card
+    pub fn as_pcsc_mut(&mut self) -> Option<&mut pcsc::Device> {
+        self.pcsc.as_mut()
     }
 }
 
-impl AsMut<Smartcard> for Solo2 {
-    fn as_mut(&mut self) -> &mut Smartcard {
-        &mut self.card
-    }
-}
+impl TryFrom<ctap::Device> for Solo2 {
+    type Error = crate::Error;
+    fn try_from(device: ctap::Device) -> Result<Solo2> {
+        let mut device = device;
+        let uuid = device.try_uuid()?;
+        let version = Admin::select(&mut device)?.version()?;
 
-impl TryFrom<Smartcard> for Solo2 {
-    type Error = Error;
-    fn try_from(card: Smartcard) -> Result<Solo2> {
-        let mut card = card;
-        let uuid = card.try_uuid()?;
-
-        use crate::App as _;
-        let mut app = crate::apps::admin::App::with(card);
-        app.select()?;
-        let version = app.version()?;
         Ok(Solo2 {
-            card: app.into_inner(),
+            ctap: Some(device),
+            pcsc: None,
             uuid,
             version,
         })
     }
 }
 
-/// A SoloKeys Solo 2 device, which may be in regular ([Solo2]) or update ([Bootloader]) mode.
+impl TryFrom<pcsc::Device> for Solo2 {
+    type Error = crate::Error;
+    fn try_from(device: pcsc::Device) -> Result<Solo2> {
+        let mut device = device;
+        let mut admin = Admin::select(&mut device)?;
+        let uuid = admin.uuid()?;
+        let version = admin.version()?;
+        Ok(Solo2 {
+            ctap: None,
+            pcsc: Some(device),
+            uuid,
+            version,
+        })
+    }
+}
+
+/// A SoloKeys Solo 2 device, which may be in regular ([Solo2]) or update ([Lpc55]) mode.
 ///
-/// Not every [Smartcard] is a [Device]; currently if it reacts to the SoloKeys administrative
+/// Not every [pcsc::Device] is a [Device]; currently if it reacts to the SoloKeys administrative
 /// [App][crate::apps::admin::App] with a valid UUID, then we treat it as such.
 // #[derive(Debug, Eq, PartialEq)]
 pub enum Device {
-    Bootloader(Bootloader),
+    Lpc55(Lpc55),
     Solo2(Solo2),
 }
 
@@ -124,10 +202,10 @@ impl fmt::Display for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Device::*;
         match self {
-            Bootloader(bootloader) => write!(
+            Lpc55(lpc55) => write!(
                 f,
                 "LPC 55 {:X}",
-                Uuid::from_u128(bootloader.uuid).to_simple()
+                Uuid::from_u128(lpc55.uuid).to_simple()
             ),
             Solo2(solo2) => solo2.fmt(f),
         }
@@ -140,9 +218,9 @@ impl UuidSelectable for Device {
     }
 
     fn list() -> Vec<Self> {
-        let bootloaders = Bootloader::list().into_iter().map(Device::from);
-        let cards = Solo2::list().into_iter().map(Device::from);
-        bootloaders.chain(cards).collect()
+        let lpc55s = Lpc55::list().into_iter().map(Device::from);
+        let solo2s = Solo2::list().into_iter().map(Device::from);
+        lpc55s.chain(solo2s).collect()
     }
 
     /// Fails is if zero or >1 devices have the given UUID.
@@ -166,48 +244,79 @@ impl UuidSelectable for Device {
 impl Device {
     fn uuid(&self) -> Uuid {
         match self {
-            Device::Bootloader(bootloader) => Uuid::from_u128(bootloader.uuid),
+            Device::Lpc55(lpc55) => Uuid::from_u128(lpc55.uuid),
             Device::Solo2(solo2) => solo2.uuid(),
         }
     }
 
-    pub fn solo2(self) -> Result<Solo2> {
+    /// NB: will hang if in bootloader mode and Solo 2 firmware does not
+    /// come up cleanly.
+    pub fn into_solo2(self) -> Result<Solo2> {
         match self {
             Device::Solo2(solo2) => Ok(solo2),
-            _ => Err(anyhow!("This device is in bootloader mode.")),
+            Device::Lpc55(lpc55) => {
+                let uuid = Uuid::from_u128(lpc55.uuid);
+                lpc55.reboot();
+
+                let mut solo2 = Solo2::having(uuid);
+                while solo2.is_err() {
+                    std::thread::sleep(std::time::Duration::from_millis(1000));
+                    solo2 = Solo2::having(uuid);
+                }
+
+                solo2
+            }
         }
     }
 
-    pub fn bootloader(self) -> Result<Bootloader> {
+    /// NB: Requires user tap if device is in Solo2 mode.
+    pub fn into_lpc55(self) -> Result<Lpc55> {
         match self {
-            Device::Bootloader(bootloader) => Ok(bootloader),
-            _ => Err(anyhow!("This device is not in bootloader mode.")),
+            Device::Lpc55(lpc55) => Ok(lpc55),
+            Device::Solo2(mut solo2) => {
+
+                let uuid = solo2.uuid;
+                // AGAIN: This requires user tap!
+                Admin::select(&mut solo2)?.boot_to_bootrom().ok();
+                drop(solo2);
+
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+                let mut lpc55 = Lpc55::having(uuid);
+                while lpc55.is_err() {
+                    std::thread::sleep(std::time::Duration::from_millis(1000));
+                    lpc55 = Lpc55::having(uuid);
+                }
+
+                lpc55
+            }
         }
     }
 
     pub fn program(self, firmware: Firmware, skip_major_prompt: bool) -> Result<()> {
-        use crate::App as _;
+        // If device is in Solo2 mode
+        // - if firmware is major version bump, confirm with dialogue
+        // - prompt user tap and get into bootloader
+        // let device_version: Version = admin.version()?;
+        // let new_version = firmware.version();
 
-        let bootloader = match self {
-            Device::Bootloader(bootloader) => bootloader,
+        let lpc55 = match self {
+            Device::Lpc55(lpc55) => lpc55,
             Device::Solo2(solo2) => {
-                let uuid = solo2.uuid();
-                // let uuid = lpc55::uuid::Builder::from_bytes(*uuid.as_bytes()).build();
-                let mut admin = crate::apps::admin::App::with(solo2.into_inner());
-                admin.select()?;
-                let device_version: Version = admin.version()?;
-                let new_version = firmware.version();
 
-                info!("current device version: {}", device_version.to_calver());
-                info!("new firmware version: {}", new_version.to_calver());
+                // If device is in Solo2 mode
+                // - if firmware is major version bump, confirm with dialogue
+                // - prompt user tap and get into Lpc55 bootloader
 
-                if !skip_major_prompt && new_version.major > device_version.major {
+                info!("device fw version: {}", solo2.version.to_calver());
+                info!("new fw version: {}", firmware.version().to_calver());
+
+                let fw_major = firmware.version().major;
+                let major_version_bump = fw_major > solo2.version.major;
+                if !skip_major_prompt && major_version_bump {
                     use dialoguer::{theme, Confirm};
                     println!("Warning: This is is major update and it could risk breaking any current credentials on your key.");
                     println!("Check latest release notes here to double check: https://github.com/solokeys/solo2/releases");
-                    println!(
-                        "If you haven't used your key for anything yet, you can ignore this.\n"
-                    );
+                    println!("If you haven't used your key for anything yet, you can ignore this.\n");
 
                     if Confirm::with_theme(&theme::ColorfulTheme::default())
                         .with_prompt("Continue?")
@@ -220,38 +329,23 @@ impl Device {
                     }
                 }
 
-                // ignore errors based on dropped connection
-                // TODO: should we raise others?
-                // prompt first - on Windows, app call doesn't return immediately
                 println!("Tap button on key to confirm, or replug to abort...");
-                admin.boot_to_bootrom().ok();
-
-                // Wait for owner to tap device, and then the bootloader to enumerate
-                std::thread::sleep(std::time::Duration::from_millis(1000));
-                let mut bootloader = Bootloader::having(uuid);
-                while bootloader.is_err() {
-                    std::thread::sleep(std::time::Duration::from_millis(1000));
-                    bootloader = Bootloader::having(uuid);
-                }
-
-                bootloader?
+                Self::Solo2(solo2).into_lpc55()?
             }
         };
 
-        println!("Bootloader detected. The LED should be off.");
+        println!("LPC55 Bootloader detected. The LED should be off.");
         println!("Writing new firmware...");
-        firmware.write_to(&bootloader);
+        firmware.write_to(&lpc55);
 
         println!("Done. Rebooting key.  The LED should turn back on.");
-        bootloader.reboot();
-
-        Ok(())
+        Self::Lpc55(lpc55).into_solo2().map(drop)
     }
 }
 
-impl From<Bootloader> for Device {
-    fn from(bootloader: Bootloader) -> Device {
-        Device::Bootloader(bootloader)
+impl From<Lpc55> for Device {
+    fn from(lpc55: Lpc55) -> Device {
+        Device::Lpc55(lpc55)
     }
 }
 

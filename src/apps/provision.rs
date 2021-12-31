@@ -1,16 +1,16 @@
 use anyhow::anyhow;
 use iso7816::Instruction;
 
-use crate::{App as _, Result};
+use crate::Result;
 
-app_boilerplate!();
+app!();
 
-impl crate::App for App {
-    const RID: &'static [u8] = super::SOLOKEYS_RID;
-    const PIX: &'static [u8] = super::PROVISIONER_PIX;
+impl<'t> crate::Select<'t> for App<'t> {
+    const RID: &'static [u8] = super::Rid::SOLOKEYS;
+    const PIX: &'static [u8] = super::Pix::PROVISION;
 }
 
-impl App {
+impl App<'_> {
     // seems to be destructive currently
     // const BOOT_TO_BOOTROM_COMMAND: u8 = 0x51;
     const GENERATE_P256_ATTESTATION: u8 = 0xbc;
@@ -30,55 +30,55 @@ impl App {
 
     pub fn generate_trussed_ed255_attestation_key(&mut self) -> Result<[u8; 32]> {
         Ok(self
-            .call(Self::GENERATE_ED255_ATTESTATION)?
+            .transport.instruct(Self::GENERATE_ED255_ATTESTATION)?
             .as_slice()
             .try_into()?)
     }
 
     pub fn generate_trussed_p256_attestation_key(&mut self) -> Result<[u8; 64]> {
         Ok(self
-            .call(Self::GENERATE_P256_ATTESTATION)?
+            .transport.instruct(Self::GENERATE_P256_ATTESTATION)?
             .as_slice()
             .try_into()?)
     }
 
     pub fn generate_trussed_x255_attestation_key(&mut self) -> Result<[u8; 32]> {
         Ok(self
-            .call(Self::GENERATE_X255_ATTESTATION)?
+            .transport.instruct(Self::GENERATE_X255_ATTESTATION)?
             .as_slice()
             .try_into()?)
     }
 
     pub fn reformat_filesystem(&mut self) -> Result<()> {
-        self.call(Self::REFORMAT_FS).map(drop)
+        self.transport.instruct(Self::REFORMAT_FS).map(drop)
     }
 
     pub fn store_trussed_ed255_attestation_certificate(&mut self, der: &[u8]) -> Result<()> {
-        self.call_with(Self::STORE_ED255_ATTESTATION_CERT, der)
+        self.transport.call(Self::STORE_ED255_ATTESTATION_CERT, der)
             .map(drop)
     }
 
     pub fn store_trussed_p256_attestation_certificate(&mut self, der: &[u8]) -> Result<()> {
-        self.call_with(Self::STORE_P256_ATTESTATION_CERT, der)
+        self.transport.call(Self::STORE_P256_ATTESTATION_CERT, der)
             .map(drop)
     }
 
     pub fn store_trussed_x255_attestation_certificate(&mut self, der: &[u8]) -> Result<()> {
-        self.call_with(Self::STORE_X255_ATTESTATION_CERT, der)
+        self.transport.call(Self::STORE_X255_ATTESTATION_CERT, der)
             .map(drop)
     }
 
     pub fn store_trussed_t1_intermediate_public_key(&mut self, public_key: [u8; 32]) -> Result<()> {
-        self.call_with(Self::STORE_T1_INTERMEDIATE_PUBKEY, &public_key)
+        self.transport.call(Self::STORE_T1_INTERMEDIATE_PUBKEY, &public_key)
             .map(drop)
     }
 
     pub fn boot_to_bootrom(&mut self) -> Result<()> {
-        self.call(Self::BOOT_TO_BOOTROM).map(drop)
+        self.transport.instruct(Self::BOOT_TO_BOOTROM).map(drop)
     }
 
     pub fn uuid(&mut self) -> Result<u128> {
-        let version_bytes = self.call(Self::GET_UUID)?;
+        let version_bytes = self.transport.instruct(Self::GET_UUID)?;
         let bytes: &[u8] = &version_bytes;
         bytes
             .try_into()
@@ -94,16 +94,16 @@ impl App {
             return Err(anyhow!("path {} too long (128 byte limit)", path));
         }
 
-        self.call_with(Instruction::Select.into(), &Self::PATH_ID)
+        self.transport.call(Instruction::Select.into(), &Self::PATH_ID)
             .map(drop)?;
-        self.call_with(Instruction::WriteBinary.into(), path.as_bytes())
-            .map(drop)?;
-
-        self.call_with(Instruction::Select.into(), &Self::DATA_ID)
-            .map(drop)?;
-        self.call_with(Instruction::WriteBinary.into(), data)
+        self.transport.call(Instruction::WriteBinary.into(), path.as_bytes())
             .map(drop)?;
 
-        self.call(Self::WRITE_FILE).map(drop)
+        self.transport.call(Instruction::Select.into(), &Self::DATA_ID)
+            .map(drop)?;
+        self.transport.call(Instruction::WriteBinary.into(), data)
+            .map(drop)?;
+
+        self.transport.instruct(Self::WRITE_FILE).map(drop)
     }
 }

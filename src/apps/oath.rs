@@ -3,13 +3,16 @@ use core::fmt;
 use anyhow::anyhow;
 use flexiber::{Decodable, Encodable, TaggedSlice};
 
-use crate::{App as _, Error, Result};
+use crate::{Error, Result};
 
-app_boilerplate!();
+app!();
 
-impl crate::App for App {
-    const RID: &'static [u8] = super::YUBICO_RID;
-    const PIX: &'static [u8] = super::OATH_PIX;
+impl<'t> crate::Select<'t> for App<'t> {
+    const RID: &'static [u8] = super::Rid::YUBICO;
+    const PIX: &'static [u8] = super::Pix::OATH;
+    // fn select(transport: &'t mut dyn Transport) -> Result<Self> {
+    //     return Err(anyhow::anyhow!("OATH app not supported on this transport"));
+    // }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -285,7 +288,7 @@ impl Decodable<'_> for Tag {
     }
 }
 
-impl App {
+impl App<'_> {
     /// Returns the credential ID.
     pub fn register(&mut self, credential: Credential) -> Result<String> {
         info!(" registering credential {:?}", &credential);
@@ -333,7 +336,7 @@ impl App {
         // if touch_required:
         //     data += struct.pack(b">BB", TAG_PROPERTY, PROP_REQUIRE_TOUCH)
 
-        self.call_with(Instruction::Put as u8, &data).map(drop)?;
+        self.transport.call(Instruction::Put as u8, &data).map(drop)?;
 
         Ok(credential_id)
     }
@@ -361,8 +364,8 @@ impl App {
         data.extend_from_slice(&challenge_part);
 
         let response =
-            self.card()
-                .call(0, Instruction::Calculate as u8, 0x00, 0x01, Some(&data))?;
+            self.transport
+                .call_iso(0, Instruction::Calculate as u8, 0x00, 0x01, &data)?;
         debug!("response: {}", hex::encode(&response));
 
         assert_eq!(response[0], 0x76);
@@ -384,16 +387,16 @@ impl App {
             .map_err(|e| e.kind())?;
         data.extend_from_slice(&credential_id_part);
 
-        self.call_with(Instruction::Delete as u8, &data).map(drop)
+        self.transport.call(Instruction::Delete as u8, &data).map(drop)
     }
 
-    pub fn list(&mut self) -> Result<()> {
-        // let mut data = Vec::new();
+    pub fn list(&mut self) -> Result<Vec<String>> {
+        let mut labels = Vec::new();
 
-        let response = self.call(Instruction::List as u8)?;
+        let response = self.transport.instruct(Instruction::List as u8)?;
         if response.is_empty() {
             debug!("no credentials");
-            return Ok(());
+            return Ok(labels);
         }
         debug!("{:?}", &hex::encode(&response));
         let mut decoder = flexiber::Decoder::new(response.as_slice());
@@ -405,16 +408,17 @@ impl App {
             // debug!("{:?}", &hex::encode(data));
             // let kind = data[0] ...
             let credential_id = std::str::from_utf8(&data[1..])?;
-            info!("{:?}", &credential_id);
+            trace!("{:?}", &credential_id);
+            labels.push(credential_id.to_string());
             if decoder.is_finished() {
-                return Ok(());
+                return Ok(labels);
             }
         }
     }
 
     pub fn reset(&mut self) -> Result<()> {
-        self.card()
-            .call(0, Instruction::Reset as u8, 0xDE, 0xAD, None)
+        self.transport
+            .call_iso(0, Instruction::Reset as u8, 0xDE, 0xAD, &[])
             .map(drop)
         // _, self._salt, self._challenge = _parse_select(self.protocol.select(AID.OATH))
     }

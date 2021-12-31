@@ -5,7 +5,7 @@ mod cli;
 
 use anyhow::anyhow;
 use lpc55::bootloader::{Bootloader, UuidSelectable};
-use solo2::{Device, Uuid};
+use solo2::{Device, Select as _, Solo2, Uuid};
 
 fn main() {
     pretty_env_logger::init_custom_env("SOLO2_LOG");
@@ -71,22 +71,29 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
         .map(|uuid| uuid.parse())
         .transpose()?;
 
+    if args.is_present("ctap") {
+        Solo2::prefer_ctap();
+    }
+
+    if args.is_present("pcsc") {
+        Solo2::prefer_pcsc();
+    }
+
     if let Some(args) = args.subcommand_matches("app") {
-        use solo2::apps::App;
 
         if let Some(args) = args.subcommand_matches("admin") {
             info!("interacting with admin app");
-            use solo2::apps::admin::App as AdminApp;
+            use solo2::apps::admin::App as Admin;
 
             if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(AdminApp::aid()).to_uppercase());
+                println!("{}", hex::encode(Admin::application_id()).to_uppercase());
                 return Ok(());
             }
 
-            let card = unwrap_or_interactively_select(uuid, "smartcards")?;
-            let mut app = AdminApp::with(card);
-            let answer_to_select = app.select()?;
-            info!("answer to select: {}", &hex::encode(answer_to_select));
+            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
+            let mut app = Admin::select(&mut solo2)?;
+            // let answer_to_select = app.select()?;
+            // info!("answer to select: {}", &hex::encode(answer_to_select));
 
             if args.subcommand_matches("boot-to-bootrom").is_some() {
                 let uuid = app.uuid()?;
@@ -117,15 +124,14 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
         if let Some(args) = args.subcommand_matches("ndef") {
             info!("interacting with NDEF app");
-            use solo2::apps::ndef::App as NdefApp;
+            use solo2::apps::Ndef;
             if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(NdefApp::aid()).to_uppercase());
+                println!("{}", hex::encode(Ndef::application_id()).to_uppercase());
                 return Ok(());
             }
 
-            let card = unwrap_or_interactively_select(uuid, "smartcards")?;
-            let mut app = NdefApp::with(card);
-            app.select()?;
+            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
+            let mut app = Ndef::select(&mut solo2)?;
 
             if args.subcommand_matches("capabilities").is_some() {
                 let capabilities = app.capabilities()?;
@@ -139,15 +145,14 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
         if let Some(args) = args.subcommand_matches("oath") {
             info!("interacting with OATH app");
-            use solo2::apps::oath::{App, Command};
+            use solo2::apps::{Oath, oath::Command};
             if args.subcommand_matches("aid").is_some() {
-                App::print_aid();
+                println!("{}", hex::encode(Oath::application_id()).to_uppercase());
                 return Ok(());
             }
 
-            let card = unwrap_or_interactively_select(uuid, "smartcards")?;
-            let mut app = App::with(card);
-            app.select()?;
+            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
+            let mut app = Oath::select(&mut solo2)?;
 
             let command: Command = Command::try_from(args)?;
 
@@ -163,34 +168,38 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 Command::Delete(label) => {
                     app.delete(label)?;
                 }
-                Command::List => app.list()?,
+                Command::List => {
+                    let labels = app.list()?;
+                    for label in labels {
+                        println!("{}", label);
+                    }
+                }
                 Command::Reset => app.reset()?,
             }
         }
 
-        // if let Some(args) = args.subcommand_matches("piv") {
-        //     info!("interacting with PIV app");
-        //     use solo2::apps::piv::App;
-        //     if args.subcommand_matches("aid").is_some() {
-        //         println!("{}", hex::encode(App::aid()).to_uppercase());
-        //         return Ok(());
-        //     }
-
-        //     let mut app = App::new(uuid)?;
-        //     app.select()?;
-        // }
-
-        if let Some(args) = args.subcommand_matches("provisioner") {
-            info!("interacting with Provisioner app");
-            use solo2::apps::provisioner::App;
+        if let Some(args) = args.subcommand_matches("piv") {
+            info!("interacting with PIV app");
+            use solo2::apps::piv::App;
             if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(App::aid()).to_uppercase());
+                println!("{}", hex::encode(App::application_id()).to_uppercase());
                 return Ok(());
             }
 
-            let card = unwrap_or_interactively_select(uuid, "smartcards")?;
-            let mut app = App::with(card);
-            app.select()?;
+            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
+            let mut _app = App::select(&mut solo2)?;
+        }
+
+        if let Some(args) = args.subcommand_matches("provision") {
+            info!("interacting with Provision app");
+            use solo2::apps::provision::App;
+            if args.subcommand_matches("aid").is_some() {
+                println!("{}", hex::encode(App::application_id()).to_uppercase());
+                return Ok(());
+            }
+
+            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
+            let mut app = App::select(&mut solo2)?;
 
             if args.subcommand_matches("generate-ed255-key").is_some() {
                 let public_key = app.generate_trussed_ed255_attestation_key()?;
@@ -252,17 +261,16 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             }
         }
 
-        if let Some(args) = args.subcommand_matches("tester") {
-            info!("interacting with Tester app");
-            use solo2::apps::tester::App;
+        if let Some(args) = args.subcommand_matches("test") {
+            info!("interacting with QA app");
+            use solo2::apps::qa::App;
             if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(App::aid()).to_uppercase());
+                println!("{}", hex::encode(App::application_id()).to_uppercase());
                 return Ok(());
             }
 
-            let card = unwrap_or_interactively_select(uuid, "smartcards")?;
-            let mut app = App::with(card);
-            app.select()?;
+            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
+            let mut _app = App::select(&mut solo2)?;
         }
     }
 
@@ -319,15 +327,15 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
         if args.subcommand_matches("list").is_some() {
             let bootloaders = Bootloader::list();
             for bootloader in bootloaders {
-                println!("{}", &Device::Bootloader(bootloader));
+                println!("{}", &Device::Lpc55(bootloader));
             }
         }
     }
 
     if let Some(_args) = args.subcommand_matches("list") {
-        if !solo2::smartcard::Service::is_available() {
-            return Err(anyhow::anyhow!("There is no PCSC service running"));
-        }
+        // if !solo2::device::pcsc::Session::is_available() {
+        //     return Err(anyhow::anyhow!("There is no PCSC service running"));
+        // }
         let devices = solo2::Device::list();
         for device in devices {
             println!("{}", &device);
@@ -335,7 +343,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(args) = args.subcommand_matches("update") {
-        if !solo2::smartcard::Service::is_available() {
+        if !solo2::device::pcsc::Session::is_available() {
             return Err(anyhow::anyhow!("There is no PCSC service running"));
         }
         let skip_major_prompt = args.is_present("yes");
