@@ -1,6 +1,5 @@
 pub use crate::{device::ctap::Device, Result};
 
-// #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Code {
     Ping,
@@ -91,10 +90,13 @@ impl Command {
 
     pub fn with_data(self, data: &[u8]) -> Self {
         assert!(data.len() <= 7609);
-        Self { code: self.code, data: data.to_vec() }
+        Self {
+            code: self.code,
+            data: data.to_vec(),
+        }
     }
 
-    pub fn packets(&self, channel: Channel) -> impl Iterator<Item=[u8; 64]> + '_  {
+    pub fn packets(&self, channel: Channel) -> impl Iterator<Item = [u8; 64]> + '_ {
         use std::iter;
 
         let l = self.data.len();
@@ -111,7 +113,9 @@ impl Command {
 
         let init_iter = iter::once(init_packet);
 
-        let cont_iter = data[init_l..].chunks(64 - 5).enumerate()
+        let cont_iter = data[init_l..]
+            .chunks(64 - 5)
+            .enumerate()
             .map(move |(i, chunk)| {
                 // dbg!("cont", i, chunk.len());
                 let mut cont_packet = [0u8; 64];
@@ -143,15 +147,16 @@ impl Channel {
 }
 
 impl Device {
-    pub fn call(&self, channel: Channel, request: Command) -> Result<Vec<u8>> { //Result<Command> {
-        let result: Result<Vec<()>> = request.packets(channel).enumerate()
+    pub fn call(&self, channel: Channel, request: Command) -> Result<Vec<u8>> {
+        //Result<Command> {
+        let result: Result<Vec<()>> = request
+            .packets(channel)
+            .enumerate()
             .map(|(_i, packet)| {
                 // need to prefix report ID
                 let mut prefixed = vec![0];
                 prefixed.extend_from_slice(&packet);
-                self.device.write(&prefixed)
-                 .map_err(|e| e.into())
-                 .map(drop)//|size| println!("sent {}", size))
+                self.device.write(&prefixed).map_err(|e| e.into()).map(drop) //|size| println!("sent {}", size))
             })
             .collect();
         result?;
@@ -172,14 +177,16 @@ impl Device {
         let init_l = core::cmp::min(l, 64 - 7) as usize;
         data[..init_l].copy_from_slice(&packet[7..][..init_l]);
 
-        let result: Result<Vec<()>> = data[init_l..].chunks_mut(64 - 5).enumerate()
+        let result: Result<Vec<()>> = data[init_l..]
+            .chunks_mut(64 - 5)
+            .enumerate()
             .map(|(i, chunk)| {
                 let read = self.device.read(&mut packet).unwrap();
                 assert!(read >= 5);
                 // dbg!(hex::encode(&packet[..read]));
                 assert_eq!(packet[..4], channel.0.to_be_bytes());
                 assert_eq!(packet[4], i as u8);
-                chunk.copy_from_slice(&packet[5..][..chunk.len()]);//64- 5]);
+                chunk.copy_from_slice(&packet[5..][..chunk.len()]); //64- 5]);
                 Ok(())
             })
             .collect();
@@ -238,7 +245,6 @@ impl Device {
         let response = self.call(channel, command)?;
         Ok(response)
     }
-
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -252,4 +258,3 @@ pub struct Init {
     pub can_cbor: bool,
     pub can_msg: bool,
 }
-

@@ -29,8 +29,7 @@ fn main() {
     // }
 
     // place side by side with binaries
-    let outdir = path::PathBuf::from(path::PathBuf::from(env_outdir)
-        .ancestors().nth(3).unwrap());
+    let outdir = path::PathBuf::from(path::PathBuf::from(env_outdir).ancestors().nth(3).unwrap());
     fs::create_dir_all(&outdir).unwrap();
     println!("{:?}", &outdir);
 

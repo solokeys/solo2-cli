@@ -336,7 +336,9 @@ impl App<'_> {
         // if touch_required:
         //     data += struct.pack(b">BB", TAG_PROPERTY, PROP_REQUIRE_TOUCH)
 
-        self.transport.call(Instruction::Put as u8, &data).map(drop)?;
+        self.transport
+            .call(Instruction::Put as u8, &data)
+            .map(drop)?;
 
         Ok(credential_id)
     }
@@ -387,7 +389,9 @@ impl App<'_> {
             .map_err(|e| e.kind())?;
         data.extend_from_slice(&credential_id_part);
 
-        self.transport.call(Instruction::Delete as u8, &data).map(drop)
+        self.transport
+            .call(Instruction::Delete as u8, &data)
+            .map(drop)
     }
 
     pub fn list(&mut self) -> Result<Vec<String>> {

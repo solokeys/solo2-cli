@@ -14,18 +14,19 @@ impl App<'_> {
     const DATA_PARAMETER: [u8; 2] = [0xE1, 0x04];
 
     fn fetch(&mut self) -> Result<Vec<u8>> {
-        self.transport
-            .instruct(Instruction::ReadBinary.into())
+        self.transport.instruct(Instruction::ReadBinary.into())
     }
 
     pub fn capabilities(&mut self) -> Result<Vec<u8>> {
-        self.transport.call(Instruction::Select.into(), &Self::CAPABILITIES_PARAMETER)
+        self.transport
+            .call(Instruction::Select.into(), &Self::CAPABILITIES_PARAMETER)
             .map(drop)?;
         self.fetch()
     }
 
     pub fn data(&mut self) -> Result<Vec<u8>> {
-        self.transport.call(Instruction::Select.into(), &Self::DATA_PARAMETER)
+        self.transport
+            .call(Instruction::Select.into(), &Self::DATA_PARAMETER)
             .map(drop)?;
         self.fetch()
     }

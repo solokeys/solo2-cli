@@ -5,7 +5,6 @@
 use std::fmt;
 
 use hidapi;
-// use once_cell::sync::Lazy;
 
 // use crate::{apps, Result, Uuid};
 use crate::{Result, Uuid, UuidSelectable};
@@ -66,10 +65,6 @@ impl Device {
     pub fn info(&self) -> &Info {
         &self.info
     }
-
-    // pub fn write(&self, data: &[u8]) -> Result<usize> {
-    //     Ok(self.device.write(data)?)
-    // }
 }
 
 impl fmt::Debug for Device {
@@ -100,29 +95,30 @@ impl Session {
     }
 
     pub fn new() -> Result<Self> {
-        Ok(Self { session: hidapi::HidApi::new()? })
-        // (&*SESSION)
-        //     .as_ref()
-        //     .map(|session| Self { session: session })
-        //     .ok_or(anyhow::anyhow!("Failure establishing HID session"))
+        Ok(Self {
+            session: hidapi::HidApi::new()?,
+        })
     }
 
     pub fn infos(&self) -> Vec<Info> {
-        self.session.device_list()
+        self.session
+            .device_list()
             .filter(|info| info.usage_page() == FIDO_USAGE_PAGE && info.usage() == FIDO_USAGE)
-            .map(|info| info.clone().into()).collect()
-
-    }
-
-    pub fn devices(&self) -> Vec<Device> {
-        self.infos().into_iter()
-            .filter_map(|info|
-                self.session.open_path(&info.path)
-                .map(|device| Device { device, info })
-                .ok())
+            .map(|info| info.clone().into())
             .collect()
     }
 
+    pub fn devices(&self) -> Vec<Device> {
+        self.infos()
+            .into_iter()
+            .filter_map(|info| {
+                self.session
+                    .open_path(&info.path)
+                    .map(|device| Device { device, info })
+                    .ok()
+            })
+            .collect()
+    }
 }
 
 impl UuidSelectable for Device {

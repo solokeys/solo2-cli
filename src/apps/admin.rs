@@ -22,7 +22,9 @@ impl App<'_> {
     /// Rebooting can cause the connection to return error, which should
     /// be special-cased by the caller.
     pub fn boot_to_bootrom(&mut self) -> Result<()> {
-        self.transport.instruct(Self::BOOT_TO_BOOTROM_COMMAND).map(drop)
+        self.transport
+            .instruct(Self::BOOT_TO_BOOTROM_COMMAND)
+            .map(drop)
     }
 
     /// Reboot the Solo 2 normally.

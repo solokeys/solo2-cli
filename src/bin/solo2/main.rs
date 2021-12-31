@@ -80,7 +80,6 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(args) = args.subcommand_matches("app") {
-
         if let Some(args) = args.subcommand_matches("admin") {
             info!("interacting with admin app");
             use solo2::apps::admin::App as Admin;
@@ -145,7 +144,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
         if let Some(args) = args.subcommand_matches("oath") {
             info!("interacting with OATH app");
-            use solo2::apps::{Oath, oath::Command};
+            use solo2::apps::{oath::Command, Oath};
             if args.subcommand_matches("aid").is_some() {
                 println!("{}", hex::encode(Oath::application_id()).to_uppercase());
                 return Ok(());

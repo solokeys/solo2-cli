@@ -2,7 +2,7 @@
 
 use hex_literal::hex;
 
-use crate::{Result, Transport};//, PcscDevice, Uuid};
+use crate::{Result, Transport};
 
 /// Temporarily wrap an exclusive pointer to a transport, after selecting the app.
 ///
@@ -44,11 +44,6 @@ impl Rid {
     pub const YUBICO: &'static [u8] = &hex!("A000000527");
 }
 
-// pub const NFC_FORUM_RID: &[u8] = &hex!("D276000085");
-// pub const NIST_RID: &[u8] = &hex!("A000000308");
-// pub const SOLOKEYS_RID: &[u8] = &hex!("A000000847");
-// pub const YUBICO_RID: &[u8] = &hex!("A000000527");
-
 /// well-known Proprietary Application Identifier Extensions.
 pub struct Pix;
 impl Pix {
@@ -63,19 +58,7 @@ impl Pix {
     pub const QA: &'static [u8] = &hex!("01000000");
 }
 
-// pub const ADMIN_PIX: &[u8] = &hex!("00000001");
-// pub const NDEF_PIX: &[u8] = &hex!("0101");
-// pub const OATH_PIX: &[u8] = &hex!("2101");
-// // the full PIX ends with 0100 for version 01.00,
-// // truncated is enough to select
-// // pub const PIV_PIX: &[u8] = &hex!("000010000100");
-// pub const PIV_PIX: &[u8] = &hex!("00001000");
-// pub const PROVISION_PIX: &[u8] = &hex!("01000001");
-// pub const QA_PIX: &[u8] = &hex!("01000000");
-
-pub trait Select<'t>:
-    From<&'t mut dyn Transport>
-{
+pub trait Select<'t>: From<&'t mut dyn Transport> {
     const RID: &'static [u8];
     const PIX: &'static [u8];
 

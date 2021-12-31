@@ -19,7 +19,7 @@ use lpc55::bootloader::UuidSelectable;
 
 use pcsc::{Protocols, Scope, ShareMode};
 
-use crate::{apps::admin::App as Admin, Select as _, Result, Uuid};
+use crate::{apps::admin::App as Admin, Result, Select as _, Uuid};
 
 /// A session with the PCSC service (running `pcscd` instance)
 pub struct Session {
@@ -111,8 +111,7 @@ impl Session {
 
     /// Get all of the usable smartcards in the system.
     pub fn devices(&self) -> Vec<Device> {
-        self
-            .infos()
+        self.infos()
             .unwrap_or_else(|_| vec![])
             .iter()
             .filter_map(|info| self.connect(&info.name).ok())
@@ -181,4 +180,3 @@ impl UuidSelectable for Device {
     //     }
     // }
 }
-
