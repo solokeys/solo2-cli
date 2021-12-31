@@ -24,8 +24,70 @@ macro_rules! app(
     }
 );
 
+#[macro_export]
+macro_rules! ctap_app(
+    () => {
+
+        pub struct App<'t> {
+            #[allow(dead_code)]
+            transport: &'t mut $crate::device::ctap::Device,
+        }
+
+        impl<'t> From<&'t mut $crate::device::ctap::Device> for App<'t> {
+            fn from(transport: &'t mut $crate::device::ctap::Device) -> App<'t> {
+                Self { transport }
+            }
+        }
+
+        impl<'t> core::ops::Deref for App<'t> {
+            type Target = $crate::device::ctap::Device;
+            fn deref(&self) -> &Self::Target {
+                self.transport
+            }
+        }
+
+        impl<'t> core::ops::DerefMut for App<'t> {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                self.transport
+            }
+        }
+    }
+);
+
+#[macro_export]
+macro_rules! pcsc_app(
+    () => {
+
+        pub struct App<'t> {
+            #[allow(dead_code)]
+            transport: &'t mut $crate::device::pcsc::Device,
+        }
+
+        impl<'t> From<&'t mut $crate::device::pcsc::Device> for App<'t> {
+            fn from(transport: &'t mut $crate::device::pcsc::Device) -> App<'t> {
+                Self { transport }
+            }
+        }
+
+        impl<'t> core::ops::Deref for App<'t> {
+            type Target = $crate::device::pcsc::Device;
+            fn deref(&self) -> &Self::Target {
+                self.transport
+            }
+        }
+
+        impl<'t> core::ops::DerefMut for App<'t> {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                self.transport
+            }
+        }
+    }
+);
+
 pub mod admin;
 pub use admin::App as Admin;
+pub mod fido;
+pub use fido::App as Fido;
 pub mod ndef;
 pub use ndef::App as Ndef;
 pub mod oath;
@@ -56,6 +118,23 @@ impl Pix {
     pub const PIV: &'static [u8] = &hex!("00001000");
     pub const PROVISION: &'static [u8] = &hex!("01000001");
     pub const QA: &'static [u8] = &hex!("01000000");
+}
+
+pub trait PcscSelect<'t>: From<&'t mut crate::device::pcsc::Device> {
+    const RID: &'static [u8];
+    const PIX: &'static [u8];
+
+    fn application_id() -> Vec<u8> {
+        let mut aid: Vec<u8> = Default::default();
+        aid.extend_from_slice(Self::RID);
+        aid.extend_from_slice(Self::PIX);
+        aid
+    }
+
+    fn select(transport: &'t mut crate::device::pcsc::Device) -> Result<Self> {
+        transport.select(Self::application_id())?;
+        Ok(Self::from(transport))
+    }
 }
 
 pub trait Select<'t>: From<&'t mut dyn Transport> {

@@ -65,6 +65,15 @@ pub fn cli() -> clap::App<'static, 'static> {
                         .subcommand(SubCommand::with_name("version").about("version")),
                 )
                 .subcommand(
+                    SubCommand::with_name("fido")
+                        .about("FIDO app")
+                        .setting(AppSettings::SubcommandRequiredElseHelp)
+                        .setting(AppSettings::InferSubcommands)
+                        .subcommand(SubCommand::with_name("aid").about("Prints the application's AID"))
+                        .subcommand(SubCommand::with_name("init").about("FIDO init reponse"))
+                        .subcommand(SubCommand::with_name("wink").about("FIDO wink"))
+                )
+                .subcommand(
                     SubCommand::with_name("ndef")
                         .about("NDEF app")
                         .setting(AppSettings::SubcommandRequiredElseHelp)

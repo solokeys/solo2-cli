@@ -90,34 +90,54 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             }
 
             let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
+            let uuid = solo2.uuid();
             let mut app = Admin::select(&mut solo2)?;
             // let answer_to_select = app.select()?;
             // info!("answer to select: {}", &hex::encode(answer_to_select));
 
             if args.subcommand_matches("boot-to-bootrom").is_some() {
-                let uuid = app.uuid()?;
                 // prompt first - on Windows, app call doesn't return immediately
                 println!("Tap button on key to reboot, or replug to abort...");
                 // ignore errors based on dropped connection
                 // TODO: should we raise others?
                 app.boot_to_bootrom().ok();
+                // this is kinda dumb, but if we don't drop solo2,
+                // we keep hold of HidApi, and the lpc55-host/bootloader.rs
+                // (which also uses HidApi) fails to connect.
+                drop(app);
+                drop(solo2);
 
+                std::thread::sleep(std::time::Duration::from_secs(1));
                 while Bootloader::having(uuid).is_err() {
                     std::thread::sleep(std::time::Duration::from_secs(5));
                 }
                 println!("...rebooted");
-            }
-            if args.subcommand_matches("reboot").is_some() {
+            } else if args.subcommand_matches("reboot").is_some() {
                 info!("attempting reboot");
                 app.reboot()?;
-            }
-            if args.subcommand_matches("uuid").is_some() {
+            } else if args.subcommand_matches("uuid").is_some() {
                 let uuid = app.uuid()?;
                 println!("{:X}", uuid.to_simple());
-            }
-            if args.subcommand_matches("version").is_some() {
+            } else if args.subcommand_matches("version").is_some() {
                 let version = app.version()?;
                 println!("{}", version.to_calver());
+            }
+        }
+
+        if let Some(args) = args.subcommand_matches("fido") {
+            info!("interacting with FIDO app");
+            use solo2::apps::Fido;
+
+            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
+            let app = Fido::from(solo2.as_ctap_mut().ok_or(anyhow!("CTAP unavailable"))?);
+
+            if args.subcommand_matches("init").is_some() {
+                let init = app.init()?;
+                println!("{:?}", init);
+            }
+            if args.subcommand_matches("wink").is_some() {
+                let init = app.init()?;
+                app.wink(init.channel)?;
             }
         }
 
