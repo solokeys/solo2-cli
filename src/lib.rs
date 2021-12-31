@@ -1,5 +1,4 @@
-//#![deny(warnings, trivial_casts, unused_qualifications)]
-#![deny(trivial_casts, unused_qualifications)]
+#![deny(warnings, trivial_casts, unused_qualifications)]
 
 #[macro_use]
 extern crate log;

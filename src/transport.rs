@@ -1,8 +1,6 @@
 //! Partial abstraction (to-be-improved)
 
-use crate::{
-    Result, Solo2,
-};
+use crate::{Result, Solo2};
 
 pub mod ctap;
 pub mod pcsc;
@@ -19,7 +17,14 @@ pub trait Transport {
     }
     /// Call in the funny ISO 7816 fashion with three extra parameters.
     /// Note that only the PCSC transport implements this, not the CTAP transport.
-    fn call_iso(&mut self, class: u8, instruction: u8, p1: u8, p2: u8, data: &[u8]) -> Result<Vec<u8>>;
+    fn call_iso(
+        &mut self,
+        class: u8,
+        instruction: u8,
+        p1: u8,
+        p2: u8,
+        data: &[u8],
+    ) -> Result<Vec<u8>>;
     fn select(&mut self, aid: Vec<u8>) -> Result<()>;
 }
 
@@ -27,13 +32,14 @@ impl Transport for ctap::Device {
     fn call(&mut self, instruction: u8, data: &[u8]) -> Result<Vec<u8>> {
         use ctap::{Code, Command};
         let init = self.init()?;
-        let command = Command::new(Code::from(instruction))
-            .with_data(data);
+        let command = Command::new(Code::from(instruction)).with_data(data);
         ctap::Device::call(self, init.channel, command)
     }
 
     fn call_iso(&mut self, _: u8, _: u8, _: u8, _: u8, _: &[u8]) -> Result<Vec<u8>> {
-        return Err(anyhow::anyhow!("p1/p2 parameters not supported on this transport"));
+        return Err(anyhow::anyhow!(
+            "p1/p2 parameters not supported on this transport"
+        ));
     }
 
     fn select(&mut self, _: Vec<u8>) -> Result<()> {
@@ -46,12 +52,20 @@ impl Transport for pcsc::Device {
         pcsc::Device::call(self, 0, instruction, 0x00, 0x00, Some(data))
     }
 
-    fn call_iso(&mut self, class: u8, instruction: u8, p1: u8, p2: u8, data: &[u8]) -> Result<Vec<u8>> {
+    fn call_iso(
+        &mut self,
+        class: u8,
+        instruction: u8,
+        p1: u8,
+        p2: u8,
+        data: &[u8],
+    ) -> Result<Vec<u8>> {
         self.call(class, instruction, p1, p2, Some(data))
     }
 
     fn select(&mut self, aid: Vec<u8>) -> Result<()> {
-        let answer_to_select = pcsc::Device::call(self,
+        let answer_to_select = pcsc::Device::call(
+            self,
             0,
             iso7816::Instruction::Select.into(),
             0x04,
@@ -59,7 +73,11 @@ impl Transport for pcsc::Device {
             Some(&aid),
         )?;
         // let answer_to_select = app.select()?;
-        info!("answer to selecting {}: {}", &hex::encode(&aid), &hex::encode(answer_to_select));
+        info!(
+            "answer to selecting {}: {}",
+            &hex::encode(&aid),
+            &hex::encode(answer_to_select)
+        );
         Ok(())
     }
 }
@@ -79,7 +97,6 @@ impl Transport for Solo2 {
                     // INVARIANT: Solo2 needs either CTAP or PCSC transport
                     unreachable!()
                 }
-
             }
             Pcsc => {
                 if let Some(device) = self.as_pcsc_mut() {
@@ -96,12 +113,21 @@ impl Transport for Solo2 {
         }
     }
 
-    fn call_iso(&mut self, class: u8, instruction: u8, p1: u8, p2: u8, data: &[u8]) -> Result<Vec<u8>> {
-            if let Some(device) = self.as_pcsc_mut() {
-                device.call_iso(class, instruction, p1, p2, data)
-            } else {
-                return Err(anyhow::anyhow!("p1/p2 parameters not supported on this transport"));
-            }
+    fn call_iso(
+        &mut self,
+        class: u8,
+        instruction: u8,
+        p1: u8,
+        p2: u8,
+        data: &[u8],
+    ) -> Result<Vec<u8>> {
+        if let Some(device) = self.as_pcsc_mut() {
+            device.call_iso(class, instruction, p1, p2, data)
+        } else {
+            return Err(anyhow::anyhow!(
+                "p1/p2 parameters not supported on this transport"
+            ));
+        }
     }
 
     fn select(&mut self, aid: Vec<u8>) -> Result<()> {
@@ -112,4 +138,3 @@ impl Transport for Solo2 {
         }
     }
 }
-

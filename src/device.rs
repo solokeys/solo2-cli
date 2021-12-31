@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use anyhow::anyhow;
 use lpc55::bootloader::{Bootloader as Lpc55, UuidSelectable};
 
-use crate::{apps::admin::App as Admin, Select as _, Firmware, Result, Uuid, Version};
+use crate::{apps::Admin, Firmware, Result, Select as _, Uuid, Version};
 use core::fmt;
 
 pub mod ctap;
@@ -115,7 +115,11 @@ impl UuidSelectable for Solo2 {
                 ctap: ctaps.remove(uuid),
                 pcsc: pcscs.remove(uuid),
                 uuid: *uuid,
-                version: Version { major: 0, minor: 0, patch: 0},
+                version: Version {
+                    major: 0,
+                    minor: 0,
+                    patch: 0,
+                },
             };
             if let Ok(mut admin) = Admin::select(&mut device) {
                 if let Ok(version) = admin.version() {
@@ -202,11 +206,7 @@ impl fmt::Display for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Device::*;
         match self {
-            Lpc55(lpc55) => write!(
-                f,
-                "LPC 55 {:X}",
-                Uuid::from_u128(lpc55.uuid).to_simple()
-            ),
+            Lpc55(lpc55) => write!(f, "LPC 55 {:X}", Uuid::from_u128(lpc55.uuid).to_simple()),
             Solo2(solo2) => solo2.fmt(f),
         }
     }
@@ -274,7 +274,6 @@ impl Device {
         match self {
             Device::Lpc55(lpc55) => Ok(lpc55),
             Device::Solo2(mut solo2) => {
-
                 let uuid = solo2.uuid;
                 // AGAIN: This requires user tap!
                 Admin::select(&mut solo2)?.boot_to_bootrom().ok();
@@ -302,7 +301,6 @@ impl Device {
         let lpc55 = match self {
             Device::Lpc55(lpc55) => lpc55,
             Device::Solo2(solo2) => {
-
                 // If device is in Solo2 mode
                 // - if firmware is major version bump, confirm with dialogue
                 // - prompt user tap and get into Lpc55 bootloader
@@ -316,7 +314,9 @@ impl Device {
                     use dialoguer::{theme, Confirm};
                     println!("Warning: This is is major update and it could risk breaking any current credentials on your key.");
                     println!("Check latest release notes here to double check: https://github.com/solokeys/solo2/releases");
-                    println!("If you haven't used your key for anything yet, you can ignore this.\n");
+                    println!(
+                        "If you haven't used your key for anything yet, you can ignore this.\n"
+                    );
 
                     if Confirm::with_theme(&theme::ColorfulTheme::default())
                         .with_prompt("Continue?")

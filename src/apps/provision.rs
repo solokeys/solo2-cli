@@ -30,21 +30,24 @@ impl App<'_> {
 
     pub fn generate_trussed_ed255_attestation_key(&mut self) -> Result<[u8; 32]> {
         Ok(self
-            .transport.instruct(Self::GENERATE_ED255_ATTESTATION)?
+            .transport
+            .instruct(Self::GENERATE_ED255_ATTESTATION)?
             .as_slice()
             .try_into()?)
     }
 
     pub fn generate_trussed_p256_attestation_key(&mut self) -> Result<[u8; 64]> {
         Ok(self
-            .transport.instruct(Self::GENERATE_P256_ATTESTATION)?
+            .transport
+            .instruct(Self::GENERATE_P256_ATTESTATION)?
             .as_slice()
             .try_into()?)
     }
 
     pub fn generate_trussed_x255_attestation_key(&mut self) -> Result<[u8; 32]> {
         Ok(self
-            .transport.instruct(Self::GENERATE_X255_ATTESTATION)?
+            .transport
+            .instruct(Self::GENERATE_X255_ATTESTATION)?
             .as_slice()
             .try_into()?)
     }
@@ -54,22 +57,26 @@ impl App<'_> {
     }
 
     pub fn store_trussed_ed255_attestation_certificate(&mut self, der: &[u8]) -> Result<()> {
-        self.transport.call(Self::STORE_ED255_ATTESTATION_CERT, der)
+        self.transport
+            .call(Self::STORE_ED255_ATTESTATION_CERT, der)
             .map(drop)
     }
 
     pub fn store_trussed_p256_attestation_certificate(&mut self, der: &[u8]) -> Result<()> {
-        self.transport.call(Self::STORE_P256_ATTESTATION_CERT, der)
+        self.transport
+            .call(Self::STORE_P256_ATTESTATION_CERT, der)
             .map(drop)
     }
 
     pub fn store_trussed_x255_attestation_certificate(&mut self, der: &[u8]) -> Result<()> {
-        self.transport.call(Self::STORE_X255_ATTESTATION_CERT, der)
+        self.transport
+            .call(Self::STORE_X255_ATTESTATION_CERT, der)
             .map(drop)
     }
 
     pub fn store_trussed_t1_intermediate_public_key(&mut self, public_key: [u8; 32]) -> Result<()> {
-        self.transport.call(Self::STORE_T1_INTERMEDIATE_PUBKEY, &public_key)
+        self.transport
+            .call(Self::STORE_T1_INTERMEDIATE_PUBKEY, &public_key)
             .map(drop)
     }
 
@@ -94,14 +101,18 @@ impl App<'_> {
             return Err(anyhow!("path {} too long (128 byte limit)", path));
         }
 
-        self.transport.call(Instruction::Select.into(), &Self::PATH_ID)
+        self.transport
+            .call(Instruction::Select.into(), &Self::PATH_ID)
             .map(drop)?;
-        self.transport.call(Instruction::WriteBinary.into(), path.as_bytes())
+        self.transport
+            .call(Instruction::WriteBinary.into(), path.as_bytes())
             .map(drop)?;
 
-        self.transport.call(Instruction::Select.into(), &Self::DATA_ID)
+        self.transport
+            .call(Instruction::Select.into(), &Self::DATA_ID)
             .map(drop)?;
-        self.transport.call(Instruction::WriteBinary.into(), data)
+        self.transport
+            .call(Instruction::WriteBinary.into(), data)
             .map(drop)?;
 
         self.transport.instruct(Self::WRITE_FILE).map(drop)
