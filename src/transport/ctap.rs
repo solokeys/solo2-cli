@@ -1,12 +1,49 @@
+//! Simplistic CTAPHID transport protocol implementation.
+//!
+//! Can switch to `ctaphid` once it stabilizes.
+
 pub use crate::{device::ctap::Device, Result};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+/// CTAPHID commands
 pub enum Code {
     Ping,
     Init,
     Wink,
     Error,
+    Keepalive,
     Vendor(VendorCode),
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(u8)]
+/// Status conferred by a Keepalive response
+pub enum Status {
+    Processing,
+    UserPresenceNeeded,
+    Other(u8),
+}
+
+impl From<Status> for u8 {
+    fn from(status: Status) -> u8 {
+        use Status::*;
+        match status {
+            Processing => 1,
+            UserPresenceNeeded => 2,
+            Other(status) => status,
+        }
+    }
+}
+
+impl From<u8> for Status {
+    fn from(status: u8) -> Self {
+        use Status::*;
+        match status {
+            1 => Processing,
+            2 => UserPresenceNeeded,
+            _ => Other(status),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -48,6 +85,7 @@ impl From<u8> for Code {
             0x6 => Init,
             0x8 => Wink,
             0x3F => Error,
+            0x3B => Keepalive,
             vendor_code @ 0x40..=0x7F => Vendor(VendorCode::new(vendor_code)),
             _ => panic!(),
         }
@@ -62,6 +100,7 @@ impl From<Code> for u8 {
             Init => 0x6,
             Wink => 0x8,
             Error => 0x3F,
+            Keepalive => 0x3B,
             Vendor(code) => code.0,
         }
     }
@@ -148,7 +187,6 @@ impl Channel {
 
 impl Device {
     pub fn call(&self, channel: Channel, request: Command) -> Result<Vec<u8>> {
-        //Result<Command> {
         let result: Result<Vec<()>> = request
             .packets(channel)
             .enumerate()
@@ -162,15 +200,29 @@ impl Device {
         result?;
 
         let mut packet = [0u8; 64];
-        let read = self.device.read(&mut packet)?;
-        assert!(read >= 7);
-        assert_eq!(packet[..4], channel.0.to_be_bytes());
+        // trace!("packet: {}", hex::encode(packet));
+        loop {
+            let read = self.device.read(&mut packet)?;
+            assert!(read >= 7);
+            if packet[..4] != channel.0.to_be_bytes() {
+                // got response for other channel
+                continue;
+            }
 
-        // this is not the case for failed commands (!)
-        if packet[4] == u8::from(Code::Error) | (1 << 7) {
-            return Err(anyhow::anyhow!("error: {:?}", Error::from(packet[6])));
+            if packet[4] == u8::from(Code::Keepalive) | (1 << 7) {
+                let status = Status::from(packet[7]);
+                info!("received keepalive, status {:?}", status);
+                continue;
+            }
+
+            // the assertion on packet[4] below is is not the case for failed commands (!)
+            if packet[4] == u8::from(Code::Error) | (1 << 7) {
+                return Err(anyhow::anyhow!("error: {:?}", Error::from(packet[7])));
+            }
+
+            assert_eq!(packet[4], u8::from(request.code) | (1 << 7));
+            break;
         }
-        assert_eq!(packet[4], u8::from(request.code) | (1 << 7));
 
         let l = u16::from_be_bytes(packet[5..][..2].try_into().unwrap());
         let mut data = vec![0u8; l as _];

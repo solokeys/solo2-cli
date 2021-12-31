@@ -5,8 +5,10 @@ use flexiber::{Decodable, Encodable, TaggedSlice};
 
 use crate::{Error, Result};
 
+// pcsc_app!();
 app!();
 
+// impl<'t> crate::apps::PcscSelect<'t> for App<'t> {
 impl<'t> crate::Select<'t> for App<'t> {
     const RID: &'static [u8] = super::Rid::YUBICO;
     const PIX: &'static [u8] = super::Pix::OATH;

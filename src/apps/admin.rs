@@ -40,9 +40,12 @@ impl App<'_> {
     /// This can be fetched in multiple other ways, and is also visible in bootloader mode.
     /// Responding successfully to this command is our criterion for treating a smartcard
     /// as a Solo 2 device.
+    ///
+    /// NB: In early firmware, this command isn't implemented on the CTAP transport.
     pub fn uuid(&mut self) -> Result<Uuid> {
         let version_bytes = self.transport.instruct(Self::UUID_COMMAND)?;
         let bytes: &[u8] = &version_bytes;
+        let _bytes_array: [u8; 16] = bytes.try_into().unwrap();
         Ok(Uuid::from_u128(
             bytes
                 .try_into()
