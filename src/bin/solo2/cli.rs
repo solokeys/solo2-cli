@@ -22,6 +22,20 @@ pub fn cli() -> clap::App<'static, 'static> {
         .help_message("Prints help information. Use --help for more details.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::InferSubcommands)
+        .arg(
+            Arg::with_name("ctap")
+                .long("ctap")
+                .takes_value(false)
+                .global(true)
+                .help("Prefer CTAP transport.")
+        )
+        .arg(
+            Arg::with_name("pcsc")
+                .long("pcsc")
+                .takes_value(false)
+                .global(true)
+                .help("Prefer PCSC transport.")
+        )
         .arg(Arg::with_name("uuid")
                 .long("uuid")
                 .short("u")
@@ -184,8 +198,8 @@ pub fn cli() -> clap::App<'static, 'static> {
                         )
                 )
                 .subcommand(
-                    SubCommand::with_name("provisioner")
-                        .about("Provisioner app")
+                    SubCommand::with_name("provision")
+                        .about("app for initial provisioning of Solo 2 device")
                         .setting(AppSettings::SubcommandRequiredElseHelp)
                         .setting(AppSettings::InferSubcommands)
                         .subcommand(SubCommand::with_name("aid").about("Prints the application's AID"))
@@ -284,8 +298,8 @@ pub fn cli() -> clap::App<'static, 'static> {
                         .subcommand(SubCommand::with_name("aid").about("Prints the application's AID")),
                 )
                 .subcommand(
-                    SubCommand::with_name("tester")
-                        .about("Tester app")
+                    SubCommand::with_name("qa")
+                        .about("app for factory QA of Solo 2 devices")
                         .setting(AppSettings::SubcommandRequiredElseHelp)
                         .setting(AppSettings::InferSubcommands)
                         .subcommand(SubCommand::with_name("aid").about("Prints the application's AID")),

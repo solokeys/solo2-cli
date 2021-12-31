@@ -29,7 +29,8 @@ fn main() {
     // }
 
     // place side by side with binaries
-    let outdir = path::PathBuf::from(path::PathBuf::from(env_outdir).ancestors().nth(3).unwrap());
+    let outdir = path::PathBuf::from(path::PathBuf::from(env_outdir)
+        .ancestors().nth(3).unwrap());
     fs::create_dir_all(&outdir).unwrap();
     println!("{:?}", &outdir);
 
@@ -43,8 +44,6 @@ fn main() {
         app.gen_completions("solo2", Shell::Bash, &outdir);
         app.gen_completions("solo2", Shell::Fish, &outdir);
         app.gen_completions("solo2", Shell::PowerShell, &outdir);
-        // // Note that we do not use clap's support for zsh. Instead, zsh completions
-        // // are manually maintained in `complete/_rg`.
         app.gen_completions("solo2", Shell::Zsh, &outdir);
     }
 

@@ -1,31 +1,31 @@
 use iso7816::Instruction;
 
-use crate::{App as _, Result};
+use crate::Result;
 
-app_boilerplate!();
+app!();
 
-impl crate::App for App {
-    const RID: &'static [u8] = super::NFC_FORUM_RID;
-    const PIX: &'static [u8] = super::NDEF_PIX;
+impl<'t> crate::Select<'t> for App<'t> {
+    const RID: &'static [u8] = super::Rid::NFC_FORUM;
+    const PIX: &'static [u8] = super::Pix::NDEF;
 }
 
-impl App {
+impl App<'_> {
     const CAPABILITIES_PARAMETER: [u8; 2] = [0xE1, 0x03];
     const DATA_PARAMETER: [u8; 2] = [0xE1, 0x04];
 
     fn fetch(&mut self) -> Result<Vec<u8>> {
-        self.card
-            .call(0, Instruction::ReadBinary.into(), 0x00, 0x00, None)
+        self.transport
+            .instruct(Instruction::ReadBinary.into())
     }
 
     pub fn capabilities(&mut self) -> Result<Vec<u8>> {
-        self.call_with(Instruction::Select.into(), &Self::CAPABILITIES_PARAMETER)
+        self.transport.call(Instruction::Select.into(), &Self::CAPABILITIES_PARAMETER)
             .map(drop)?;
         self.fetch()
     }
 
     pub fn data(&mut self) -> Result<Vec<u8>> {
-        self.call_with(Instruction::Select.into(), &Self::DATA_PARAMETER)
+        self.transport.call(Instruction::Select.into(), &Self::DATA_PARAMETER)
             .map(drop)?;
         self.fetch()
     }
