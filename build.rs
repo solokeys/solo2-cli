@@ -39,7 +39,8 @@ fn main() {
 
         // Use clap to build completion files.
         // Pro-tip: use `fd -HIe bash` to get OUT_DIR
-        let mut app = cli::cli();
+        use clap::IntoApp;
+        let mut app = cli::Cli::into_app();
         generate_to(shells::Bash, &mut app, "solo2", &outdir).unwrap();
         generate_to(shells::Fish, &mut app, "solo2", &outdir).unwrap();
         generate_to(shells::PowerShell, &mut app, "solo2", &outdir).unwrap();

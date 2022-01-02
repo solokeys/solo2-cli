@@ -52,6 +52,25 @@ impl Solo2 {
     pub fn prefer_pcsc() {
         PREFER_CTAP.store(false, Ordering::SeqCst);
     }
+
+    /// NB: Requires user tap
+    pub fn into_lpc55(self) -> Result<Lpc55> {
+        let mut solo2 = self;
+        let uuid = solo2.uuid;
+        // AGAIN: This requires user tap!
+        Admin::select(&mut solo2)?.boot_to_bootrom().ok();
+        drop(solo2);
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        let mut lpc55 = Lpc55::having(uuid);
+        while lpc55.is_err() {
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            lpc55 = Lpc55::having(uuid);
+        }
+
+        lpc55
+    }
+
 }
 
 impl fmt::Debug for Solo2 {
@@ -275,21 +294,7 @@ impl Device {
     pub fn into_lpc55(self) -> Result<Lpc55> {
         match self {
             Device::Lpc55(lpc55) => Ok(lpc55),
-            Device::Solo2(mut solo2) => {
-                let uuid = solo2.uuid;
-                // AGAIN: This requires user tap!
-                Admin::select(&mut solo2)?.boot_to_bootrom().ok();
-                drop(solo2);
-
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                let mut lpc55 = Lpc55::having(uuid);
-                while lpc55.is_err() {
-                    std::thread::sleep(std::time::Duration::from_secs(1));
-                    lpc55 = Lpc55::having(uuid);
-                }
-
-                lpc55
-            }
+            Device::Solo2(solo2) => solo2.into_lpc55(),
         }
     }
 
@@ -340,7 +345,7 @@ impl Device {
         println!("Writing new firmware...");
         firmware.write_to(&lpc55);
 
-        println!("Done. Rebooting key.  The LED should turn back on.");
+        println!("Done. Rebooting key. The LED should turn back on.");
         Self::Lpc55(lpc55).into_solo2().map(drop)
     }
 }
