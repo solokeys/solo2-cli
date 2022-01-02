@@ -64,7 +64,7 @@ pub fn unwrap_or_interactively_select<T: core::fmt::Display + UuidSelectable>(
     Ok(thing)
 }
 
-fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
+fn try_main(args: clap::ArgMatches) -> anyhow::Result<()> {
     let uuid = args
         .value_of("uuid")
         // if uuid is Some, parse and fail on invalidity (no silent failure)
@@ -280,7 +280,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
             }
         }
 
-        if let Some(args) = args.subcommand_matches("test") {
+        if let Some(args) = args.subcommand_matches("qa") {
             info!("interacting with QA app");
             use solo2::apps::qa::App;
             if args.subcommand_matches("aid").is_some() {
@@ -293,12 +293,6 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
         }
     }
 
-    #[cfg(not(feature = "dev-pki"))]
-    if args.subcommand_matches("dev-pki").is_some() {
-        return Err(anyhow!(
-            "Compile with `--features dev-pki` for dev PKI support!"
-        ));
-    }
     if let Some(args) = args.subcommand_matches("pki") {
         if let Some(args) = args.subcommand_matches("ca") {
             if let Some(args) = args.subcommand_matches("fetch-certificate") {
@@ -309,10 +303,10 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
                 if atty::is(atty::Stream::Stdout) {
                     eprintln!("Some things to do with the DER data");
                     eprintln!(
-                        "* redirect to a file: `> {:?}.der",
+                        "* redirect to a file: `> {}.der`",
                         &authority.name().to_lowercase()
                     );
-                    eprintln!("* inspect contents by piping to step: `| step certificate inspect");
+                    eprintln!("* inspect contents by piping to step: `| step certificate inspect`");
                     return Err(anyhow::anyhow!("Refusing to write binary data to stdout"));
                 }
                 stdout().write_all(certificate.der())?;
