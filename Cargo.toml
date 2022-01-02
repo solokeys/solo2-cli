@@ -26,7 +26,7 @@ hex = "0.4.3"
 hex-literal = "0.3.1"
 hidapi = { version = "1.3", default-features = false, features = ["linux-static-hidraw"] }
 iso7816 = "0.1.0-alpha.0"
-lpc55 = "0.1.0-alpha.8"
+lpc55 = "0.1.0"
 # TODO: replace use of lazy_static with once_cell in CLI,
 # even though we no longer use this in our CTAP impl.
 # once_cell = "1.8"
@@ -44,7 +44,7 @@ ureq = { version = "2.1.1", features = ["json"] }
 
 # cli
 atty = { version = "0.2.14", optional = true }
-clap = { version = "2.33.3", optional = true }
+clap = { version = "3", features = ["cargo", "derive"], optional = true }
 ctrlc = { version = "3.2.0", optional = true }
 lazy_static = { version = "1.4.0", optional = true }
 pretty_env_logger = { version = "0.4.0", optional = true }
@@ -58,7 +58,8 @@ yasna = { version = "0.4.0", optional = true }
 
 # needed in build.rs
 [build-dependencies]
-clap = { version = "2.33.3", default-features = false }
+clap = { version = "3", features = ["cargo", "derive"] }
+clap_complete = "3"
 lazy_static = "1.4.0"
 
 [features]

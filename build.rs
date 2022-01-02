@@ -35,15 +35,15 @@ fn main() {
 
     #[cfg(feature = "cli")]
     {
-        use clap::Shell;
+        use clap_complete::{generate_to, shells};
 
         // Use clap to build completion files.
         // Pro-tip: use `fd -HIe bash` to get OUT_DIR
         let mut app = cli::cli();
-        app.gen_completions("solo2", Shell::Bash, &outdir);
-        app.gen_completions("solo2", Shell::Fish, &outdir);
-        app.gen_completions("solo2", Shell::PowerShell, &outdir);
-        app.gen_completions("solo2", Shell::Zsh, &outdir);
+        generate_to(shells::Bash, &mut app, "solo2", &outdir).unwrap();
+        generate_to(shells::Fish, &mut app, "solo2", &outdir).unwrap();
+        generate_to(shells::PowerShell, &mut app, "solo2", &outdir).unwrap();
+        generate_to(shells::Zsh, &mut app, "solo2", &outdir).unwrap();
     }
 
     // // Make the current git hash available to the build.

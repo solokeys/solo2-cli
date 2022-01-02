@@ -430,7 +430,7 @@ impl App<'_> {
     }
 }
 
-impl TryFrom<&clap::ArgMatches<'_>> for Command {
+impl TryFrom<&clap::ArgMatches> for Command {
     type Error = Error;
     fn try_from(args: &clap::ArgMatches) -> Result<Self> {
         if let Some(args) = args.subcommand_matches("register") {
