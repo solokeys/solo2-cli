@@ -112,7 +112,7 @@ impl Secret {
     /// length of 160 bits."
     ///
     /// But 14B = 112b < 128b.
-    fn from_base32(encoded: &str, digest: Digest) -> Result<Self> {
+    pub fn from_base32(encoded: &str, digest: Digest) -> Result<Self> {
         let unshortened = data_encoding::BASE32.decode(encoded.as_bytes())?;
         let mut shortened = match digest {
             Digest::Sha1 => {

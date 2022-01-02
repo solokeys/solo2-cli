@@ -4,19 +4,363 @@ extern crate log;
 mod cli;
 
 use anyhow::anyhow;
-use lpc55::bootloader::{Bootloader, UuidSelectable};
-use solo2::{Device, Select as _, Solo2, Uuid};
+use solo2::{Device, Select as _, Solo2, Uuid, UuidSelectable};
 
 fn main() {
     pretty_env_logger::init_custom_env("SOLO2_LOG");
     restore_cursor_on_ctrl_c();
 
-    let args = cli::cli().get_matches();
+    // let args = cli::cli().get_matches();
+    use clap::Parser;
+    let args = cli::Cli::parse();
 
     if let Err(err) = try_main(args) {
         eprintln!("Error: {}", err);
         std::process::exit(1);
     }
+}
+
+fn try_main(args: cli::Cli) -> anyhow::Result<()> {
+    let uuid: Option<Uuid> = args.uuid
+        .map(|uuid| uuid.parse())
+        .transpose()?;
+
+    if args.ctap {
+        Solo2::prefer_ctap();
+    }
+    if args.pcsc {
+        Solo2::prefer_pcsc();
+    }
+
+    // use cli::Subcommands::*;
+    use cli::Apps::*;
+    match args.subcommand {
+        cli::Subcommands::App(app) => {
+
+            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
+
+            // let uuid = solo2.uuid();
+
+            match app {
+                Admin(admin) => {
+                    use cli::Admin::*;
+                    use solo2::apps::Admin;
+
+                    let mut app = Admin::select(&mut solo2)?;
+
+                    match admin {
+                        Aid => {
+                            println!("{}", hex::encode(Admin::application_id()).to_uppercase());
+                            return Ok(());
+                        }
+                        Reboot => {
+                            info!("attempting reboot");
+                            app.reboot()?;
+                        }
+                        BootToBootrom => {
+                            drop(app);
+                            println!("Tap button on key to reboot, or replug to abort...");
+                            solo2.into_lpc55()?;
+                        }
+                        Uuid => {
+                            let uuid = app.uuid()?;
+                            println!("{:X}", uuid.to_simple());
+                        }
+                        Version => {
+                            let version = app.version()?;
+                            println!("{}", version.to_calver());
+                        }
+                    }
+                }
+                Fido(fido) => {
+                    use cli::Fido::*;
+                    use solo2::apps::Fido;
+
+                    let app = Fido::from(solo2.as_ctap_mut().ok_or(anyhow!("CTAP unavailable"))?);
+
+                    match fido {
+                        Init => {
+                            println!("{:?}", app.init()?);
+                        }
+                        Wink => {
+                            let channel = app.init()?.channel;
+                            app.wink(channel)?;
+                        }
+                    }
+                }
+                Ndef(ndef) => {
+                    use cli::Ndef::*;
+                    use solo2::apps::Ndef;
+
+                    let mut app = Ndef::select(&mut solo2)?;
+
+                    match ndef {
+                        Aid => {
+                            println!("{}", hex::encode(Ndef::application_id()).to_uppercase());
+                            return Ok(());
+                        }
+                        Capabilities => {
+                            let capabilities = app.capabilities()?;
+                            println!("{}", hex::encode(capabilities));
+                        }
+                        Data => {
+                            let data = app.data()?;
+                            println!("{}", hex::encode(data));
+                        }
+                    }
+                }
+                Oath(oath) => {
+                    use cli::Oath::*;
+                    use solo2::apps::Oath;
+
+                    let mut app = Oath::select(&mut solo2)?;
+
+                    match oath {
+                        Aid => {
+                            println!("{}", hex::encode(Oath::application_id()).to_uppercase());
+                            return Ok(());
+                        }
+                        Delete { label } => {
+                            app.delete(label)?;
+                        }
+                        List => {
+                            let labels = app.list()?;
+                            for label in labels {
+                                println!("{}", label);
+                            }
+                        }
+                        // TODO: factor out the conversion
+                        Register(args) => {
+                            use solo2::apps::oath;
+
+                            use cli::OathAlgorithm;
+                            let digest = match args.algorithm {
+                                OathAlgorithm::Sha1 => oath::Digest::Sha1,
+                                OathAlgorithm::Sha256 => oath::Digest::Sha256,
+                            };
+                            let secret = solo2::apps::oath::Secret::from_base32(
+                                &args.secret, digest)?;
+                            use cli::OathKind;
+                            let kind = match args.kind {
+                                OathKind::Hotp => oath::Kind::Hotp(oath::Hotp {
+                                    initial_counter: args.counter
+                                }),
+                                OathKind::Totp => oath::Kind::Totp(oath::Totp {
+                                    period: args.period
+                                }),
+                            };
+                            let credential = solo2::apps::oath::Credential {
+                                label: args.label,
+                                issuer: args.issuer,
+                                secret,
+                                kind,
+                                algorithm: digest,
+                                digits: args.digits,
+                            };
+                            let credential_id = app.register(credential)?;
+                            println!("{}", credential_id);
+                        }
+                        Reset => app.reset()?,
+                        // TODO: factor out the conversion
+                        Totp { label, timestamp } => {
+                            use std::time::SystemTime;
+                            use solo2::apps::oath;
+
+                            let timestamp = timestamp
+                                .map(|s| s.parse())
+                                .transpose()?
+                                .unwrap_or_else(|| {
+                                    let since_epoch = SystemTime::now()
+                                        .duration_since(SystemTime::UNIX_EPOCH)
+                                        .unwrap();
+                                    since_epoch.as_secs()
+                                });
+                            let authenticate = oath::Authenticate {
+                                label,
+                                timestamp,
+                            };
+                            let code = app.authenticate(authenticate)?;
+                            println!("{}", code);
+                        }
+                    }
+                }
+                Piv(piv) => {
+                    use cli::Piv::*;
+                    use solo2::apps::Piv;
+
+                    // let mut app = Piv::select(&mut solo2)?;
+                    Piv::select(&mut solo2)?;
+
+                    match piv {
+                        Aid => {
+                            println!("{}", hex::encode(Piv::application_id()).to_uppercase());
+                            return Ok(());
+                        }
+                    }
+                }
+                Provision(provision) => {
+                    use cli::Provision::*;
+                    use solo2::apps::provision::App as Provision;
+
+                    let mut app = Provision::select(&mut solo2)?;
+
+                    match provision {
+                        Aid => {
+                            println!("{}", hex::encode(Provision::application_id()).to_uppercase());
+                            return Ok(());
+                        }
+                        GenerateEd255Key => {
+                            let public_key = app.generate_trussed_ed255_attestation_key()?;
+                            println!("{}", hex::encode(public_key));
+                        }
+                        GenerateP256Key => {
+                            let public_key = app.generate_trussed_p256_attestation_key()?;
+                            println!("{}", hex::encode(public_key));
+                        }
+                        GenerateX255Key => {
+                            let public_key = app.generate_trussed_x255_attestation_key()?;
+                            println!("{}", hex::encode(public_key));
+                        }
+                        ReformatFilesystem => app.reformat_filesystem()?,
+                        StoreEd255Cert { der } => {
+                            let certificate = std::fs::read(der)?;
+                            app.store_trussed_ed255_attestation_certificate(&certificate)?;
+                        }
+                        StoreP256Cert { der } => {
+                            let certificate = std::fs::read(der)?;
+                            app.store_trussed_p256_attestation_certificate(&certificate)?;
+                        }
+                        StoreX255Cert { der } => {
+                            let certificate = std::fs::read(der)?;
+                            app.store_trussed_x255_attestation_certificate(&certificate)?;
+                        }
+                        StoreT1Pubkey { bytes } => {
+                            let pubkey: [u8; 32] = std::fs::read(bytes)?.as_slice().try_into()?;
+                            app.store_trussed_t1_intermediate_public_key(pubkey)?;
+                        }
+                        StoreFidoBatchCert { cert } => {
+                            let cert = std::fs::read(cert)?;
+                            app.write_file(&cert, "/fido/x5c/00")?;
+                        }
+                        StoreFidoBatchKey { bytes } => {
+                            let key = std::fs::read(bytes)?;
+                            app.write_file(&key, "/fido/sec/00")?;
+                        }
+                        WriteFile { data, path } => {
+                            let data = std::fs::read(data)?;
+                            app.write_file(&data, &path)?;
+                        }
+                    }
+                }
+                Qa(cmd) => {
+                    use cli::Qa::*;
+                    use solo2::apps::qa::App;
+
+                    App::select(&mut solo2)?;
+
+                    match cmd {
+                        Aid => {
+                            println!("{}", hex::encode(App::application_id()).to_uppercase());
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+        cli::Subcommands::Pki(pki) => {
+            match pki {
+                cli::Pki::Ca(ca) => {
+                    match ca {
+                        cli::Ca::FetchCertificate { authority } => {
+                            use std::io::{stdout, Write as _};
+                            let authority: solo2::pki::Authority = authority.as_str().try_into()?;
+                            let certificate = solo2::pki::fetch_certificate(authority)?;
+                            if atty::is(atty::Stream::Stdout) {
+                                eprintln!("Some things to do with the DER data");
+                                eprintln!(
+                                    "* redirect to a file: `> {}.der`",
+                                    &authority.name().to_lowercase()
+                                );
+                                eprintln!("* inspect contents by piping to step: `| step certificate inspect`");
+                                return Err(anyhow::anyhow!("Refusing to write binary data to stdout"));
+                            }
+                            stdout().write_all(certificate.der())?;
+                        }
+                    }
+                }
+                #[cfg(feature = "dev-pki")]
+                cli::Pki::Dev(dev) => {
+                    match dev {
+                        cli::Dev::Fido { key, cert } => {
+                            let (aaguid, key_trussed, key_pem, cert) =
+                                solo2::pki::dev::generate_selfsigned_fido();
+
+                            info!("\n{}", key_pem);
+                            info!("\n{}", cert.serialize_pem()?);
+
+                            std::fs::write(args.value_of("KEY").unwrap(), &key_trussed)?;
+                            std::fs::write(args.value_of("CERT").unwrap(), &cert.serialize_der()?)?;
+
+                            println!("{}", hex::encode_upper(aaguid));
+                        }
+                    }
+                }
+            }
+        }
+        cli::Subcommands::Bootloader(args) => {
+            match args {
+                cli::Bootloader::Reboot => {
+                    let bootloader = match uuid {
+                        Some(uuid) => lpc55::Bootloader::having(uuid)?,
+                        None => interactively_select(lpc55::Bootloader::list(), "Solo 2 bootloaders")?,
+                    };
+                    bootloader.reboot();
+                }
+                cli::Bootloader::List => {
+                    let bootloaders = lpc55::Bootloader::list();
+                    for bootloader in bootloaders {
+                        println!("{}", &Device::Lpc55(bootloader));
+                    }
+                }
+            }
+        }
+        cli::Subcommands::List => {
+            let devices = solo2::Device::list();
+            for device in devices {
+                println!("{}", &device);
+            }
+        }
+        cli::Subcommands::Update { yes, all, firmware } => {
+
+            let firmware: solo2::Firmware =
+                firmware
+                    .map(solo2::Firmware::read_from_file)
+                    .unwrap_or_else(|| {
+                        println!("Downloading latest release from https://github.com/solokeys/solo2/");
+                        solo2::Firmware::download_latest()
+                    })?;
+
+            println!(
+                "Fetched firmware version {}",
+                &firmware.version().to_calver()
+            );
+
+            if all {
+                for device in Device::list() {
+                    device.program(firmware.clone(), yes)?;
+                }
+                return Ok(());
+            } else {
+                let device = match uuid {
+                    Some(uuid) => Device::having(uuid)?,
+                    None => interactively_select(Device::list(), "Solo 2 devices")?,
+                };
+                return device.program(firmware, yes);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// description: plural of thing to be selected, e.g. "Solo 2 devices"
@@ -62,335 +406,6 @@ pub fn unwrap_or_interactively_select<T: core::fmt::Display + UuidSelectable>(
         None => interactively_select(T::list(), description)?,
     };
     Ok(thing)
-}
-
-fn try_main(args: clap::ArgMatches) -> anyhow::Result<()> {
-    let uuid = args
-        .value_of("uuid")
-        // if uuid is Some, parse and fail on invalidity (no silent failure)
-        .map(|uuid| uuid.parse())
-        .transpose()?;
-
-    if args.is_present("ctap") {
-        Solo2::prefer_ctap();
-    }
-
-    if args.is_present("pcsc") {
-        Solo2::prefer_pcsc();
-    }
-
-    if let Some(args) = args.subcommand_matches("app") {
-        if let Some(args) = args.subcommand_matches("admin") {
-            info!("interacting with admin app");
-            use solo2::apps::admin::App as Admin;
-
-            if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(Admin::application_id()).to_uppercase());
-                return Ok(());
-            }
-
-            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
-            let uuid = solo2.uuid();
-            let mut app = Admin::select(&mut solo2)?;
-            // let answer_to_select = app.select()?;
-            // info!("answer to select: {}", &hex::encode(answer_to_select));
-
-            if args.subcommand_matches("boot-to-bootrom").is_some() {
-                // prompt first - on Windows, app call doesn't return immediately
-                println!("Tap button on key to reboot, or replug to abort...");
-                // ignore errors based on dropped connection
-                // TODO: should we raise others?
-                app.boot_to_bootrom().ok();
-                // this is kinda dumb, but if we don't drop solo2,
-                // we keep hold of HidApi, and the lpc55-host/bootloader.rs
-                // (which also uses HidApi) fails to connect.
-                drop(app);
-                drop(solo2);
-
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                while Bootloader::having(uuid).is_err() {
-                    std::thread::sleep(std::time::Duration::from_secs(5));
-                }
-                println!("...rebooted");
-            } else if args.subcommand_matches("reboot").is_some() {
-                info!("attempting reboot");
-                app.reboot()?;
-            } else if args.subcommand_matches("uuid").is_some() {
-                let uuid = app.uuid()?;
-                println!("{:X}", uuid.to_simple());
-            } else if args.subcommand_matches("version").is_some() {
-                let version = app.version()?;
-                println!("{}", version.to_calver());
-            }
-        }
-
-        if let Some(args) = args.subcommand_matches("fido") {
-            info!("interacting with FIDO app");
-            use solo2::apps::Fido;
-
-            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
-            let app = Fido::from(solo2.as_ctap_mut().ok_or(anyhow!("CTAP unavailable"))?);
-
-            if args.subcommand_matches("init").is_some() {
-                let init = app.init()?;
-                println!("{:?}", init);
-            }
-            if args.subcommand_matches("wink").is_some() {
-                let init = app.init()?;
-                app.wink(init.channel)?;
-            }
-        }
-
-        if let Some(args) = args.subcommand_matches("ndef") {
-            info!("interacting with NDEF app");
-            use solo2::apps::Ndef;
-            if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(Ndef::application_id()).to_uppercase());
-                return Ok(());
-            }
-
-            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
-            let mut app = Ndef::select(&mut solo2)?;
-
-            if args.subcommand_matches("capabilities").is_some() {
-                let capabilities = app.capabilities()?;
-                println!("{}", hex::encode(capabilities));
-            }
-            if args.subcommand_matches("data").is_some() {
-                let data = app.data()?;
-                println!("{}", hex::encode(data));
-            }
-        }
-
-        if let Some(args) = args.subcommand_matches("oath") {
-            info!("interacting with OATH app");
-            use solo2::apps::{oath::Command, Oath};
-            if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(Oath::application_id()).to_uppercase());
-                return Ok(());
-            }
-
-            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
-            let mut app = Oath::select(&mut solo2)?;
-
-            let command: Command = Command::try_from(args)?;
-
-            match command {
-                Command::Register(register) => {
-                    let credential_id = app.register(register)?;
-                    println!("{}", credential_id);
-                }
-                Command::Authenticate(authenticate) => {
-                    let code = app.authenticate(authenticate)?;
-                    println!("{}", code);
-                }
-                Command::Delete(label) => {
-                    app.delete(label)?;
-                }
-                Command::List => {
-                    let labels = app.list()?;
-                    for label in labels {
-                        println!("{}", label);
-                    }
-                }
-                Command::Reset => app.reset()?,
-            }
-        }
-
-        if let Some(args) = args.subcommand_matches("piv") {
-            info!("interacting with PIV app");
-            use solo2::apps::piv::App;
-            if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(App::application_id()).to_uppercase());
-                return Ok(());
-            }
-
-            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
-            let mut _app = App::select(&mut solo2)?;
-        }
-
-        if let Some(args) = args.subcommand_matches("provision") {
-            info!("interacting with Provision app");
-            use solo2::apps::provision::App;
-            if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(App::application_id()).to_uppercase());
-                return Ok(());
-            }
-
-            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
-            let mut app = App::select(&mut solo2)?;
-
-            if args.subcommand_matches("generate-ed255-key").is_some() {
-                let public_key = app.generate_trussed_ed255_attestation_key()?;
-                println!("{}", hex::encode(public_key));
-            }
-            if args.subcommand_matches("generate-p256-key").is_some() {
-                let public_key = app.generate_trussed_p256_attestation_key()?;
-                println!("{}", hex::encode(public_key));
-            }
-            if args.subcommand_matches("generate-x255-key").is_some() {
-                let public_key = app.generate_trussed_x255_attestation_key()?;
-                println!("{}", hex::encode(public_key));
-            }
-            if args.subcommand_matches("reformat-filesystem").is_some() {
-                app.reformat_filesystem()?;
-            }
-            if let Some(args) = args.subcommand_matches("store-ed255-cert") {
-                let cert_file = args.value_of("DER").unwrap();
-                let certificate = std::fs::read(cert_file)?;
-                app.store_trussed_ed255_attestation_certificate(&certificate)?;
-            }
-            if let Some(args) = args.subcommand_matches("store-p256-cert") {
-                let cert_file = args.value_of("DER").unwrap();
-                let certificate = std::fs::read(cert_file)?;
-                app.store_trussed_p256_attestation_certificate(&certificate)?;
-            }
-            if let Some(args) = args.subcommand_matches("store-x255-cert") {
-                let cert_file = args.value_of("DER").unwrap();
-                let certificate = std::fs::read(cert_file)?;
-                app.store_trussed_x255_attestation_certificate(&certificate)?;
-            }
-            if let Some(args) = args.subcommand_matches("store-t1-pubkey") {
-                let pubkey_file = args.value_of("BYTES").unwrap();
-                let public_key: [u8; 32] = std::fs::read(pubkey_file)?.as_slice().try_into()?;
-                app.store_trussed_t1_intermediate_public_key(public_key)?;
-            }
-            if let Some(args) = args.subcommand_matches("store-fido-batch-key") {
-                let key_file = args.value_of("KEY").unwrap();
-                let key = std::fs::read(key_file)?;
-                app.write_file(&key, "/fido/sec/00")?;
-            }
-            if let Some(args) = args.subcommand_matches("store-fido-batch-cert") {
-                let cert_file = args.value_of("CERT").unwrap();
-                let cert = std::fs::read(cert_file)?;
-                app.write_file(&cert, "/fido/x5c/00")?;
-            }
-            if args.subcommand_matches("boot-to-bootrom").is_some() {
-                app.boot_to_bootrom()?;
-            }
-            if args.subcommand_matches("uuid").is_some() {
-                let uuid = app.uuid()?;
-                println!("{}", hex::encode_upper(uuid.to_be_bytes()));
-            }
-            if let Some(args) = args.subcommand_matches("write-file") {
-                let file = args.value_of("DATA").unwrap();
-                let data = std::fs::read(file)?;
-                let path = args.value_of("PATH").unwrap();
-                app.write_file(&data, path)?;
-            }
-        }
-
-        if let Some(args) = args.subcommand_matches("qa") {
-            info!("interacting with QA app");
-            use solo2::apps::qa::App;
-            if args.subcommand_matches("aid").is_some() {
-                println!("{}", hex::encode(App::application_id()).to_uppercase());
-                return Ok(());
-            }
-
-            let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
-            let mut _app = App::select(&mut solo2)?;
-        }
-    }
-
-    if let Some(args) = args.subcommand_matches("pki") {
-        if let Some(args) = args.subcommand_matches("ca") {
-            if let Some(args) = args.subcommand_matches("fetch-certificate") {
-                use std::io::{stdout, Write as _};
-                let authority: solo2::pki::Authority =
-                    args.value_of("AUTHORITY").unwrap().try_into()?;
-                let certificate = solo2::pki::fetch_certificate(authority)?;
-                if atty::is(atty::Stream::Stdout) {
-                    eprintln!("Some things to do with the DER data");
-                    eprintln!(
-                        "* redirect to a file: `> {}.der`",
-                        &authority.name().to_lowercase()
-                    );
-                    eprintln!("* inspect contents by piping to step: `| step certificate inspect`");
-                    return Err(anyhow::anyhow!("Refusing to write binary data to stdout"));
-                }
-                stdout().write_all(certificate.der())?;
-            }
-        }
-        #[cfg(feature = "dev-pki")]
-        if let Some(args) = args.subcommand_matches("dev") {
-            if let Some(args) = args.subcommand_matches("fido") {
-                let (aaguid, key_trussed, key_pem, cert) =
-                    solo2::pki::dev::generate_selfsigned_fido();
-
-                info!("\n{}", key_pem);
-                info!("\n{}", cert.serialize_pem()?);
-
-                std::fs::write(args.value_of("KEY").unwrap(), &key_trussed)?;
-                std::fs::write(args.value_of("CERT").unwrap(), &cert.serialize_der()?)?;
-
-                println!("{}", hex::encode_upper(aaguid));
-            }
-        }
-    }
-
-    if let Some(args) = args.subcommand_matches("bootloader") {
-        if args.subcommand_matches("reboot").is_some() {
-            let bootloader = match uuid {
-                Some(uuid) => Bootloader::having(uuid)?,
-                None => interactively_select(Bootloader::list(), "Solo 2 bootloaders")?,
-            };
-            bootloader.reboot();
-        }
-        if args.subcommand_matches("list").is_some() {
-            let bootloaders = Bootloader::list();
-            for bootloader in bootloaders {
-                println!("{}", &Device::Lpc55(bootloader));
-            }
-        }
-    }
-
-    if let Some(_args) = args.subcommand_matches("list") {
-        // if !solo2::device::pcsc::Session::is_available() {
-        //     return Err(anyhow::anyhow!("There is no PCSC service running"));
-        // }
-        let devices = solo2::Device::list();
-        for device in devices {
-            println!("{}", &device);
-        }
-    }
-
-    if let Some(args) = args.subcommand_matches("update") {
-        let skip_major_prompt = args.is_present("yes");
-        let update_all = args.is_present("all");
-
-        let sb2_filepath = args.value_of("FIRMWARE").map(|s| s.to_string());
-
-        use solo2::Firmware;
-
-        let firmware: Firmware =
-            sb2_filepath
-                .map(Firmware::read_from_file)
-                .unwrap_or_else(|| {
-                    println!("Downloading latest release from https://github.com/solokeys/solo2/");
-                    Firmware::download_latest()
-                })?;
-
-        println!(
-            "Fetched firmware version {}",
-            &firmware.version().to_calver()
-        );
-
-        if update_all {
-            for device in Device::list() {
-                device.program(firmware.clone(), skip_major_prompt)?;
-            }
-            return Ok(());
-        } else {
-            let device = match uuid {
-                Some(uuid) => Device::having(uuid)?,
-                None => interactively_select(Device::list(), "Solo 2 devices")?,
-            };
-            return device.program(firmware, skip_major_prompt);
-        }
-    }
-
-    Ok(())
 }
 
 /// In `dialoguer` dialogs, the cursor is hidden and, if the user interrupts via Ctrl-C,
