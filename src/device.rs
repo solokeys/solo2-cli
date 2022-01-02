@@ -257,10 +257,12 @@ impl Device {
             Device::Lpc55(lpc55) => {
                 let uuid = Uuid::from_u128(lpc55.uuid);
                 lpc55.reboot();
+                drop(lpc55);
 
+                std::thread::sleep(std::time::Duration::from_secs(1));
                 let mut solo2 = Solo2::having(uuid);
                 while solo2.is_err() {
-                    std::thread::sleep(std::time::Duration::from_millis(1000));
+                    std::thread::sleep(std::time::Duration::from_secs(1));
                     solo2 = Solo2::having(uuid);
                 }
 
@@ -279,10 +281,10 @@ impl Device {
                 Admin::select(&mut solo2)?.boot_to_bootrom().ok();
                 drop(solo2);
 
-                std::thread::sleep(std::time::Duration::from_millis(1000));
+                std::thread::sleep(std::time::Duration::from_secs(1));
                 let mut lpc55 = Lpc55::having(uuid);
                 while lpc55.is_err() {
-                    std::thread::sleep(std::time::Duration::from_millis(1000));
+                    std::thread::sleep(std::time::Duration::from_secs(1));
                     lpc55 = Lpc55::having(uuid);
                 }
 

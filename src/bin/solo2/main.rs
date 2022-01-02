@@ -362,9 +362,6 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if let Some(args) = args.subcommand_matches("update") {
-        if !solo2::device::pcsc::Session::is_available() {
-            return Err(anyhow::anyhow!("There is no PCSC service running"));
-        }
         let skip_major_prompt = args.is_present("yes");
         let update_all = args.is_present("all");
 
