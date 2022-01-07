@@ -21,9 +21,7 @@ fn main() {
 }
 
 fn try_main(args: cli::Cli) -> anyhow::Result<()> {
-    let uuid: Option<Uuid> = args.uuid
-        .map(|uuid| uuid.parse())
-        .transpose()?;
+    let uuid: Option<Uuid> = args.uuid.map(|uuid| uuid.parse()).transpose()?;
 
     if args.ctap {
         Solo2::prefer_ctap();
@@ -36,7 +34,6 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
     use cli::Apps::*;
     match args.subcommand {
         cli::Subcommands::App(app) => {
-
             let mut solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
 
             // let uuid = solo2.uuid();
@@ -138,15 +135,15 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
                                 OathAlgorithm::Sha1 => oath::Digest::Sha1,
                                 OathAlgorithm::Sha256 => oath::Digest::Sha256,
                             };
-                            let secret = solo2::apps::oath::Secret::from_base32(
-                                &args.secret, digest)?;
+                            let secret =
+                                solo2::apps::oath::Secret::from_base32(&args.secret, digest)?;
                             use cli::OathKind;
                             let kind = match args.kind {
                                 OathKind::Hotp => oath::Kind::Hotp(oath::Hotp {
-                                    initial_counter: args.counter
+                                    initial_counter: args.counter,
                                 }),
                                 OathKind::Totp => oath::Kind::Totp(oath::Totp {
-                                    period: args.period
+                                    period: args.period,
                                 }),
                             };
                             let credential = solo2::apps::oath::Credential {
@@ -163,8 +160,8 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
                         Reset => app.reset()?,
                         // TODO: factor out the conversion
                         Totp { label, timestamp } => {
-                            use std::time::SystemTime;
                             use solo2::apps::oath;
+                            use std::time::SystemTime;
 
                             let timestamp = timestamp
                                 .map(|s| s.parse())
@@ -175,10 +172,7 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
                                         .unwrap();
                                     since_epoch.as_secs()
                                 });
-                            let authenticate = oath::Authenticate {
-                                label,
-                                timestamp,
-                            };
+                            let authenticate = oath::Authenticate { label, timestamp };
                             let code = app.authenticate(authenticate)?;
                             println!("{}", code);
                         }
@@ -206,7 +200,10 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
 
                     match provision {
                         Aid => {
-                            println!("{}", hex::encode(Provision::application_id()).to_uppercase());
+                            println!(
+                                "{}",
+                                hex::encode(Provision::application_id()).to_uppercase()
+                            );
                             return Ok(());
                         }
                         GenerateEd255Key => {
@@ -269,61 +266,55 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
         }
         cli::Subcommands::Pki(pki) => {
             match pki {
-                cli::Pki::Ca(ca) => {
-                    match ca {
-                        cli::Ca::FetchCertificate { authority } => {
-                            use std::io::{stdout, Write as _};
-                            let authority: solo2::pki::Authority = authority.as_str().try_into()?;
-                            let certificate = solo2::pki::fetch_certificate(authority)?;
-                            if atty::is(atty::Stream::Stdout) {
-                                eprintln!("Some things to do with the DER data");
-                                eprintln!(
-                                    "* redirect to a file: `> {}.der`",
-                                    &authority.name().to_lowercase()
-                                );
-                                eprintln!("* inspect contents by piping to step: `| step certificate inspect`");
-                                return Err(anyhow::anyhow!("Refusing to write binary data to stdout"));
-                            }
-                            stdout().write_all(certificate.der())?;
+                cli::Pki::Ca(ca) => match ca {
+                    cli::Ca::FetchCertificate { authority } => {
+                        use std::io::{stdout, Write as _};
+                        let authority: solo2::pki::Authority = authority.as_str().try_into()?;
+                        let certificate = solo2::pki::fetch_certificate(authority)?;
+                        if atty::is(atty::Stream::Stdout) {
+                            eprintln!("Some things to do with the DER data");
+                            eprintln!(
+                                "* redirect to a file: `> {}.der`",
+                                &authority.name().to_lowercase()
+                            );
+                            eprintln!("* inspect contents by piping to step: `| step certificate inspect`");
+                            return Err(anyhow::anyhow!("Refusing to write binary data to stdout"));
                         }
+                        stdout().write_all(certificate.der())?;
                     }
-                }
+                },
                 #[cfg(feature = "dev-pki")]
-                cli::Pki::Dev(dev) => {
-                    match dev {
-                        cli::Dev::Fido { key, cert } => {
-                            let (aaguid, key_trussed, key_pem, cert) =
-                                solo2::pki::dev::generate_selfsigned_fido();
+                cli::Pki::Dev(dev) => match dev {
+                    cli::Dev::Fido { key, cert } => {
+                        let (aaguid, key_trussed, key_pem, cert) =
+                            solo2::pki::dev::generate_selfsigned_fido();
 
-                            info!("\n{}", key_pem);
-                            info!("\n{}", cert.serialize_pem()?);
+                        info!("\n{}", key_pem);
+                        info!("\n{}", cert.serialize_pem()?);
 
-                            std::fs::write(args.value_of("KEY").unwrap(), &key_trussed)?;
-                            std::fs::write(args.value_of("CERT").unwrap(), &cert.serialize_der()?)?;
+                        std::fs::write(args.value_of("KEY").unwrap(), &key_trussed)?;
+                        std::fs::write(args.value_of("CERT").unwrap(), &cert.serialize_der()?)?;
 
-                            println!("{}", hex::encode_upper(aaguid));
-                        }
+                        println!("{}", hex::encode_upper(aaguid));
                     }
-                }
+                },
             }
         }
-        cli::Subcommands::Bootloader(args) => {
-            match args {
-                cli::Bootloader::Reboot => {
-                    let bootloader = match uuid {
-                        Some(uuid) => lpc55::Bootloader::having(uuid)?,
-                        None => interactively_select(lpc55::Bootloader::list(), "Solo 2 bootloaders")?,
-                    };
-                    bootloader.reboot();
-                }
-                cli::Bootloader::List => {
-                    let bootloaders = lpc55::Bootloader::list();
-                    for bootloader in bootloaders {
-                        println!("{}", &Device::Lpc55(bootloader));
-                    }
+        cli::Subcommands::Bootloader(args) => match args {
+            cli::Bootloader::Reboot => {
+                let bootloader = match uuid {
+                    Some(uuid) => lpc55::Bootloader::having(uuid)?,
+                    None => interactively_select(lpc55::Bootloader::list(), "Solo 2 bootloaders")?,
+                };
+                bootloader.reboot();
+            }
+            cli::Bootloader::List => {
+                let bootloaders = lpc55::Bootloader::list();
+                for bootloader in bootloaders {
+                    println!("{}", &Device::Lpc55(bootloader));
                 }
             }
-        }
+        },
         cli::Subcommands::List => {
             let devices = solo2::Device::list();
             for device in devices {
@@ -331,14 +322,12 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
             }
         }
         cli::Subcommands::Update { yes, all, firmware } => {
-
-            let firmware: solo2::Firmware =
-                firmware
-                    .map(solo2::Firmware::read_from_file)
-                    .unwrap_or_else(|| {
-                        println!("Downloading latest release from https://github.com/solokeys/solo2/");
-                        solo2::Firmware::download_latest()
-                    })?;
+            let firmware: solo2::Firmware = firmware
+                .map(solo2::Firmware::read_from_file)
+                .unwrap_or_else(|| {
+                    println!("Downloading latest release from https://github.com/solokeys/solo2/");
+                    solo2::Firmware::download_latest()
+                })?;
 
             println!(
                 "Fetched firmware version {}",

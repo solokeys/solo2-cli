@@ -1,4 +1,4 @@
-use clap::{self, crate_authors, crate_version, AppSettings, Args, ArgEnum, Parser, Subcommand};
+use clap::{self, crate_authors, crate_version, AppSettings, ArgEnum, Args, Parser, Subcommand};
 
 /// solo2 is the go-to tool to interact with a Solo 2 security key.
 ///
@@ -50,7 +50,7 @@ pub enum Subcommands {
         all: bool,
         /// Update to a specific firmware secure boot file (.sb2)
         firmware: Option<String>,
-    }
+    },
 }
 
 #[derive(Subcommand)]
@@ -61,7 +61,6 @@ pub enum Bootloader {
     /// List all available bootloaders
     #[clap(visible_alias = "ls")]
     List,
-
     // NB: If we convert lpc55-host to clap 3, should be possible
     // to slot in its CLI here.
 
@@ -89,7 +88,7 @@ pub enum Ca {
     FetchCertificate {
         /// Name of authority, e.g. R1, T1, S3, etc.
         authority: String,
-    }
+    },
 }
 
 #[derive(Subcommand)]
@@ -101,7 +100,7 @@ pub enum Dev {
         key: String,
         /// Output file for self-signed certificate in DER format
         cert: String,
-    }
+    },
 }
 
 #[derive(Subcommand)]
@@ -174,7 +173,7 @@ pub enum Oath {
     /// Delete existing credential
     Delete {
         /// Label of credential
-        label: String
+        label: String,
     },
     /// List all credentials
     List,
@@ -206,7 +205,7 @@ pub struct OathRegister {
     pub kind: OathKind,
 
     /// (only HOTP) initial counter to use for HOTPs
-    #[clap(default_value = "0", long, short)]//, required_if_eq("kind", "hotp"))]
+    #[clap(default_value = "0", long, short)] //, required_if_eq("kind", "hotp"))]
     pub counter: u32,
 
     /// number of digits to output
@@ -214,9 +213,8 @@ pub struct OathRegister {
     pub digits: u8,
 
     /// (only TOTP) period in seconds for which a TOTP is valid
-    #[clap(default_value = "30", long, short)]//, required_if_eq("kind", "totp"))]
+    #[clap(default_value = "30", long, short)] //, required_if_eq("kind", "totp"))]
     pub period: u32,
-
 }
 
 // ignore case?
@@ -275,17 +273,17 @@ pub enum Provision {
     /// Store Trussed T1 intermediate public key
     StoreT1Pubkey {
         /// Ed255 public key (raw, 32 bytes)
-        bytes: String
+        bytes: String,
     },
     /// Store FIDO batch attestation certificate
     StoreFidoBatchCert {
         /// Attestation certificate
-        cert: String
+        cert: String,
     },
     /// Store FIDO batch attestation private key
     StoreFidoBatchKey {
         /// P256 private key in internal format
-        bytes: String
+        bytes: String,
     },
 
     /// Reformat the internal filesystem
