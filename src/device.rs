@@ -70,7 +70,6 @@ impl Solo2 {
 
         lpc55
     }
-
 }
 
 impl fmt::Debug for Solo2 {
