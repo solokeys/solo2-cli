@@ -286,14 +286,14 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
                 #[cfg(feature = "dev-pki")]
                 cli::Pki::Dev(dev) => match dev {
                     cli::Dev::Fido { key, cert } => {
-                        let (aaguid, key_trussed, key_pem, cert) =
+                        let (aaguid, key_trussed, key_pem, certificate) =
                             solo2::pki::dev::generate_selfsigned_fido();
 
                         info!("\n{}", key_pem);
-                        info!("\n{}", cert.serialize_pem()?);
+                        info!("\n{}", certificate.serialize_pem()?);
 
-                        std::fs::write(args.value_of("KEY").unwrap(), &key_trussed)?;
-                        std::fs::write(args.value_of("CERT").unwrap(), &cert.serialize_der()?)?;
+                        std::fs::write(key, &key_trussed)?;
+                        std::fs::write(cert, &certificate.serialize_der()?)?;
 
                         println!("{}", hex::encode_upper(aaguid));
                     }
