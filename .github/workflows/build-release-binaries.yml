@@ -135,7 +135,7 @@ jobs:
           path: ./CHANGELOG.md
         if: startsWith(github.ref, 'refs/tags/v')
 
-      - name: Publish
+      - name: Publish binary
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -144,3 +144,54 @@ jobs:
           asset_name: solo2-$tag-${{ matrix.release_name }}
           body: ${{ steps.changelog_reader.outputs.log_entry }}
         if: startsWith(github.ref, 'refs/tags/v')
+
+      - name: Publish udev rules
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: 70-solo2.rules
+          tag: ${{ github.ref }}
+          asset_name: 70-solo2.rules
+          body: ${{ steps.changelog_reader.outputs.log_entry }}
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.os == 'ubuntu-latest'
+
+      - name: Publish Bash completions
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/x86_64-unknown-linux-gnu/release/solo2.bash
+          tag: ${{ github.ref }}
+          asset_name: solo2.completions.bash
+          body: ${{ steps.changelog_reader.outputs.log_entry }}
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.os == 'ubuntu-latest'
+
+      - name: Publish Fish completions
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/x86_64-unknown-linux-gnu/release/solo2.fish
+          tag: ${{ github.ref }}
+          asset_name: solo2.completions.fish
+          body: ${{ steps.changelog_reader.outputs.log_entry }}
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.os == 'ubuntu-latest'
+
+      - name: Publish PowerShell completions
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/x86_64-unknown-linux-gnu/release/_solo2.ps1
+          tag: ${{ github.ref }}
+          asset_name: solo2.completions.powershell
+          body: ${{ steps.changelog_reader.outputs.log_entry }}
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.os == 'ubuntu-latest'
+
+      - name: Publish Zsh completions
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/x86_64-unknown-linux-gnu/release/_solo2
+          tag: ${{ github.ref }}
+          asset_name: solo2.completions.zsh
+          body: ${{ steps.changelog_reader.outputs.log_entry }}
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.os == 'ubuntu-latest'
+
