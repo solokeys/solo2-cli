@@ -75,11 +75,45 @@ jobs:
           args: --release --locked --target=${{ matrix.target }} ${{ matrix.cargo_flags }}
           use-cross: ${{ matrix.cross }}
 
-      - name: Upload artifact
+      - name: Upload binary
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.target }}
+          name: solo2-${{ matrix.release_name }}
           path: ${{ matrix.artifact_name }}
+
+      - name: udev rules
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          path: 70-solo2.rules
+
+      - name: Bash completions
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          name: solo2.completions.bash
+          path: target/release/solo2.bash
+
+      - name: Fish completions
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          name: solo2.completions.fish
+          path: target/release/solo2.fish
+
+      - name: Powershell completions
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          name: solo2.completions.powershell
+          path: target/release/_solo2.ps1
+
+      - name: Zsh completions
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          name: solo2.completions.zsh
+          path: target/release/_solo2
 
       ###
       # Below this line, steps will only be ran if a tag was pushed.
