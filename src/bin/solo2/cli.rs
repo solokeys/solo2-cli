@@ -4,7 +4,7 @@ use clap::{self, crate_authors, crate_version, AppSettings, ArgEnum, Args, Parse
 ///
 /// Print more logs by setting env SOLO2_LOG='info' or SOLO2_LOG='debug'.
 ///
-/// Project homepage: https://github.com/solokeys/solo2-cli
+/// Project homepage: <https://github.com/solokeys/solo2-cli>.
 #[derive(Parser)]
 #[clap(setting(AppSettings::InferSubcommands))]
 #[clap(author = crate_authors!())]
@@ -35,6 +35,9 @@ pub enum Subcommands {
 
     #[clap(subcommand)]
     Bootloader(Bootloader),
+
+    #[clap(subcommand)]
+    Completion(Completion),
 
     /// List all available devices
     #[clap(visible_alias = "ls")]
@@ -69,6 +72,19 @@ pub enum Bootloader {
     //     /// Configuration file containing settings
     //     config: String,
     // },
+}
+
+#[derive(Subcommand)]
+/// Generate shell completion scripts
+pub enum Completion {
+    /// Print completion script for Bash
+    Bash,
+    /// Print completion script for Fish
+    Fish,
+    /// Print completion script for PowerShell
+    PowerShell,
+    /// Print completion script for Zsh
+    Zsh,
 }
 
 #[derive(Subcommand)]

@@ -85,6 +85,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v2
         with:
+          name: 70-solo2.rules
           path: 70-solo2.rules
 
       - name: Bash completions
@@ -92,28 +93,28 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: solo2.completions.bash
-          path: target/release/solo2.bash
+          path: target/x86_64-unknown-linux-gnu/release/solo2.bash
 
       - name: Fish completions
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v2
         with:
           name: solo2.completions.fish
-          path: target/release/solo2.fish
+          path: target/x86_64-unknown-linux-gnu/release/solo2.fish
 
-      - name: Powershell completions
+      - name: PowerShell completions
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v2
         with:
           name: solo2.completions.powershell
-          path: target/release/_solo2.ps1
+          path: target/x86_64-unknown-linux-gnu/release/_solo2.ps1
 
       - name: Zsh completions
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v2
         with:
           name: solo2.completions.zsh
-          path: target/release/_solo2
+          path: target/x86_64-unknown-linux-gnu/release/_solo2
 
       ###
       # Below this line, steps will only be ran if a tag was pushed.
