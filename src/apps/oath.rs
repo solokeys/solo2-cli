@@ -98,7 +98,8 @@ impl Secret {
     /// Note: The secret is later used as an HMAC key.
     ///
     /// It is a property of HMAC that a key that is longer than the digest
-    /// output size is first shortened by applying the digest.
+    /// block size is first shortened by applying the digest. For SHA-1 and
+    /// SHA-2, the block size is 64 bytes (512 bits).
     ///
     /// Therefore, applying the shortening in this implementation has no effect
     /// on the calculated OTP, but it does make communication with the OATH
@@ -117,12 +118,13 @@ impl Secret {
         let mut shortened = match digest {
             Digest::Sha1 => {
                 use sha1::{Digest, Sha1};
-                if unshortened.len() > Sha1::output_size() {
+                let block_size = 64;
+                if unshortened.len() > block_size {
                     trace!(
                         "shortening {} as {} > {}",
                         hex::encode(&unshortened),
                         unshortened.len(),
-                        Sha1::output_size()
+                        block_size
                     );
                     let shortened = Sha1::digest(&unshortened).as_slice().to_vec();
                     trace!("...to {}", hex::encode(&shortened));
@@ -133,12 +135,13 @@ impl Secret {
             }
             Digest::Sha256 => {
                 use sha2::{Digest, Sha256};
-                if unshortened.len() > Sha256::output_size() {
+                let block_size = 64;
+                if unshortened.len() > block_size {
                     trace!(
                         "shortening {} as {} > {}",
                         hex::encode(&unshortened),
                         unshortened.len(),
-                        Sha256::output_size()
+                        block_size
                     );
                     let shortened = Sha256::digest(&unshortened).as_slice().to_vec();
                     trace!("...to {}", hex::encode(&shortened));
