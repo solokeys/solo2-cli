@@ -315,14 +315,16 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
             }
         },
         cli::Subcommands::Completion(args) => {
-            use clap_complete::{generate, shells::*};
             use clap::IntoApp as _;
+            use clap_complete::{generate, shells::*};
             use std::io::stdout;
             let mut app = cli::Cli::into_app();
             match args {
                 cli::Completion::Bash => generate(Bash, &mut app, "solo2", &mut stdout()),
                 cli::Completion::Fish => generate(Fish, &mut app, "solo2", &mut stdout()),
-                cli::Completion::PowerShell => generate(PowerShell, &mut app, "solo2", &mut stdout()),
+                cli::Completion::PowerShell => {
+                    generate(PowerShell, &mut app, "solo2", &mut stdout())
+                }
                 cli::Completion::Zsh => generate(Zsh, &mut app, "solo2", &mut stdout()),
             }
         }
