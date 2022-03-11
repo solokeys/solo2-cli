@@ -94,8 +94,8 @@ impl Session {
             .session
             .list_readers(&mut card_names_buffer)?
             .map(|name_cstr| name_cstr.to_string_lossy().to_string())
-            .map(|name| {
-                let device = self.connect(&name).unwrap();
+            .filter_map(|name| self.connect(&name).ok().map(|device| (name, device)))
+            .map(|(name, device)| {
                 Info {
                     name,
                     // kind: device.attribute(pcsc::Attribute::VendorIfdType),
