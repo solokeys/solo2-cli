@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2022-01-07
+
+- `--dry-run` flag for updating
+- winking
+- readout factory settings lock status (if admin app supports it)
+- `--all` flag for apps (likely not consistently working yet)
+- "boot-to-bootrom" renamed to "maintenance"
+- pull device Trussed certificates from web
+- don't attempt firmware rollbacks
+- timeout if owner is not present for firmware update
+- `--verbose` flag to configure log level instead of env variable
+
 ## [0.1.1] - 2022-01-07
 
 - Implement CTAP basics (unlocks firmware update on macOS + conservative Linux)

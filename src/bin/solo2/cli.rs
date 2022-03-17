@@ -1,15 +1,29 @@
-use clap::{self, crate_authors, crate_version, AppSettings, ArgEnum, Args, Parser, Subcommand};
+use clap::{self, crate_authors, crate_version, ArgEnum, Args, Parser, Subcommand};
 
-/// solo2 is the go-to tool to interact with a Solo 2 security key.
+/// CLI to update and use Solo 2 security keys.
 ///
 /// Print more logs by setting env SOLO2_LOG='info' or SOLO2_LOG='debug'.
 ///
-/// Project homepage: <https://github.com/solokeys/solo2-cli>.
+/// Project homepage: <https://github.com/solokeys/solo2-cli>
+/// Trussed homepage: <https://trussed.dev>
+///
+/// Design: [Rain's Rust CLI recommendations][cli-recommendations] is a good read.
+///
+/// [cli-recommendations]: https://rust-cli-recommendations.sunshowers.io/
+
 #[derive(Parser)]
-#[clap(setting(AppSettings::InferSubcommands))]
+#[clap(infer_subcommands = true)]
 #[clap(author = crate_authors!())]
 #[clap(version = crate_version!())]
 pub struct Cli {
+    #[clap(flatten)]
+    pub global_options: GlobalOptions,
+    #[clap(subcommand)]
+    pub subcommand: Subcommands,
+}
+
+#[derive(Debug, Args)]
+pub struct GlobalOptions {
     /// Prefer CTAP transport.
     #[clap(global = true, help_heading = "TRANSPORT", long)]
     pub ctap: bool,
@@ -22,8 +36,21 @@ pub struct Cli {
     #[clap(global = true, help_heading = "SELECTION", long, short)]
     pub uuid: Option<String>,
 
-    #[clap(subcommand)]
-    pub subcommand: Subcommands,
+    /// Interact with all applicable Solo 2 devices.
+    #[clap(
+        global = true,
+        help_heading = "SELECTION",
+        long,
+        short,
+        conflicts_with = "uuid"
+    )]
+    pub all: bool,
+
+    /// Verbosity level (can be specified multiple times)
+    ///
+    /// Unused so far; TODO: switch over from `pretty_env_logger` to using this.
+    #[clap(long, short, global = true, parse(from_occurrences))]
+    pub verbose: usize,
 }
 
 #[derive(Subcommand)]
@@ -45,6 +72,9 @@ pub enum Subcommands {
 
     /// Update to latest firmware published by SoloKeys. Warns on Major updates.
     Update {
+        /// Just show the version that would be installed
+        #[clap(long, short = 'n')]
+        dry_run: bool,
         /// DANGER! Proceed with major updates without prompt
         #[clap(long, short)]
         yes: bool,
@@ -52,7 +82,8 @@ pub enum Subcommands {
         #[clap(long, short)]
         all: bool,
         /// Update to a specific firmware secure boot file (.sb2)
-        firmware: Option<String>,
+        #[clap(long, short)]
+        with: Option<String>,
     },
 }
 
@@ -95,6 +126,7 @@ pub enum Pki {
     #[cfg(feature = "dev-pki")]
     #[clap(subcommand)]
     Dev(Dev),
+    Web,
 }
 
 #[derive(Subcommand)]
@@ -120,7 +152,7 @@ pub enum Dev {
 }
 
 #[derive(Subcommand)]
-#[clap(setting(AppSettings::InferSubcommands))]
+#[clap(infer_subcommands = true)]
 /// Interact with on-device applications
 pub enum Apps {
     #[clap(subcommand)]
@@ -140,23 +172,29 @@ pub enum Apps {
 }
 
 #[derive(Subcommand)]
-#[clap(setting(AppSettings::InferSubcommands))]
+#[clap(infer_subcommands = true)]
 /// admin app
 pub enum Admin {
     /// Print the application's AID
     Aid,
     /// Reboot device (as Solo 2)
-    Reboot,
-    /// Reboot device (into Lpc 55 bootloader)
-    BootToBootrom,
+    #[clap(alias = "reboot")]
+    Restart,
+    /// Switch device to maintenance mode (reboot into LPC 55 bootloader)
+    #[clap(alias = "boot-to-bootrom")]
+    Maintenance,
+    /// Is device locked? (not available in early firmware)
+    Locked,
     /// Return device UUID (not available over CTAP in early firmware)
     Uuid,
     /// Return device firmware version
     Version,
+    /// Wink the device
+    Wink,
 }
 
 #[derive(Subcommand)]
-#[clap(setting(AppSettings::InferSubcommands))]
+#[clap(infer_subcommands = true)]
 /// FIDO app
 pub enum Fido {
     /// FIDO init response
@@ -166,7 +204,7 @@ pub enum Fido {
 }
 
 #[derive(Subcommand)]
-#[clap(setting(AppSettings::InferSubcommands))]
+#[clap(infer_subcommands = true)]
 /// NDEF app
 pub enum Ndef {
     /// Print the application's AID
@@ -178,7 +216,7 @@ pub enum Ndef {
 }
 
 #[derive(Subcommand)]
-#[clap(setting(AppSettings::InferSubcommands))]
+#[clap(infer_subcommands = true)]
 /// OATH app
 pub enum Oath {
     /// Print the application's AID
@@ -250,7 +288,7 @@ pub enum OathKind {
 }
 
 #[derive(Subcommand)]
-#[clap(setting(AppSettings::InferSubcommands))]
+#[clap(infer_subcommands = true)]
 /// PIV app
 pub enum Piv {
     /// Print the application's AID
@@ -258,7 +296,7 @@ pub enum Piv {
 }
 
 #[derive(Subcommand)]
-#[clap(setting(AppSettings::InferSubcommands))]
+#[clap(infer_subcommands = true)]
 /// Provision app
 pub enum Provision {
     /// Print the application's AID
@@ -315,7 +353,7 @@ pub enum Provision {
 }
 
 #[derive(Subcommand)]
-#[clap(setting(AppSettings::InferSubcommands))]
+#[clap(infer_subcommands = true)]
 /// QA app
 pub enum Qa {
     /// Print the application's AID
