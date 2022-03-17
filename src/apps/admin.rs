@@ -12,8 +12,10 @@ impl App<'_> {
     pub const REBOOT_COMMAND: u8 = 0x53;
     pub const VERSION_COMMAND: u8 = 0x61;
     pub const UUID_COMMAND: u8 = 0x62;
+    pub const WINK_COMMAND: u8 = 0x08;
+    pub const LOCKED_COMMAND: u8 = 0x63;
 
-    /// Reboot the Solo 2 to bootloader mode.
+    /// Reboot the Solo 2 to maintenance mode (LPC 55 bootloader).
     ///
     /// NOTE: This command requires user confirmation (by tapping the device).
     /// Current firmware implementation has no timeout, so if the user aborts
@@ -21,7 +23,7 @@ impl App<'_> {
     ///
     /// Rebooting can cause the connection to return error, which should
     /// be special-cased by the caller.
-    pub fn boot_to_bootrom(&mut self) -> Result<()> {
+    pub fn maintenance(&mut self) -> Result<()> {
         self.transport
             .instruct(Self::BOOT_TO_BOOTROM_COMMAND)
             .map(drop)
@@ -64,5 +66,18 @@ impl App<'_> {
             )
         })?;
         Ok(bytes.into())
+    }
+
+    /// Send the wink command (which fido-authenticator does not implement).
+    pub fn wink(&mut self) -> Result<()> {
+        self.transport.instruct(Self::WINK_COMMAND).map(drop)
+    }
+
+    pub fn locked(&mut self) -> Result<bool> {
+        let locked = self.transport.instruct(Self::LOCKED_COMMAND)?;
+        locked
+            .get(0)
+            .map(|&locked| locked == 1)
+            .ok_or_else(|| anyhow::anyhow!("response to locked status empty"))
     }
 }

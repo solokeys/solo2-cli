@@ -24,6 +24,7 @@ pub mod pcsc;
 pub struct Solo2 {
     ctap: Option<ctap::Device>,
     pcsc: Option<pcsc::Device>,
+    locked: Option<bool>,
     uuid: Uuid,
     version: Version,
 }
@@ -58,12 +59,16 @@ impl Solo2 {
         let mut solo2 = self;
         let uuid = solo2.uuid;
         // AGAIN: This requires user tap!
-        Admin::select(&mut solo2)?.boot_to_bootrom().ok();
+        let now = std::time::Instant::now();
+        Admin::select(&mut solo2)?.maintenance().ok();
         drop(solo2);
 
         std::thread::sleep(std::time::Duration::from_secs(1));
         let mut lpc55 = Lpc55::having(uuid);
         while lpc55.is_err() {
+            if now.elapsed().as_secs() > 15 {
+                return Err(anyhow!("User prompt to confirm maintenance timed out!"));
+            }
             std::thread::sleep(std::time::Duration::from_secs(1));
             lpc55 = Lpc55::having(uuid);
         }
@@ -94,12 +99,18 @@ impl fmt::Display for Solo2 {
             (false, true) => "PCSC only",
             _ => unreachable!(),
         };
+        let lock_status = match self.locked {
+            Some(true) => ", locked",
+            Some(false) => ", unlocked",
+            None => "",
+        };
         write!(
             f,
-            "Solo 2 {:X} ({}, firmware {})",
+            "Solo 2 {:X} ({}, firmware {}{})",
             &self.uuid.to_simple(),
             transports,
-            &self.version().to_calver()
+            &self.version().to_calver(),
+            lock_status,
         )
     }
 }
@@ -132,6 +143,7 @@ impl UuidSelectable for Solo2 {
             let mut device = Self {
                 ctap: ctaps.remove(uuid),
                 pcsc: pcscs.remove(uuid),
+                locked: None,
                 uuid: *uuid,
                 version: Version {
                     major: 0,
@@ -139,6 +151,11 @@ impl UuidSelectable for Solo2 {
                     patch: 0,
                 },
             };
+            if let Ok(mut admin) = Admin::select(&mut device) {
+                if let Ok(locked) = admin.locked() {
+                    device.locked = Some(locked);
+                }
+            }
             if let Ok(mut admin) = Admin::select(&mut device) {
                 if let Ok(version) = admin.version() {
                     device.version = version;
@@ -182,12 +199,14 @@ impl TryFrom<ctap::Device> for Solo2 {
     type Error = crate::Error;
     fn try_from(device: ctap::Device) -> Result<Solo2> {
         let mut device = device;
+        let locked = Admin::select(&mut device)?.locked().ok();
         let uuid = device.try_uuid()?;
         let version = Admin::select(&mut device)?.version()?;
 
         Ok(Solo2 {
             ctap: Some(device),
             pcsc: None,
+            locked,
             uuid,
             version,
         })
@@ -204,6 +223,7 @@ impl TryFrom<pcsc::Device> for Solo2 {
         Ok(Solo2 {
             ctap: None,
             pcsc: Some(device),
+            locked: None,
             uuid,
             version,
         })
@@ -313,6 +333,12 @@ impl Device {
 
                 info!("device fw version: {}", solo2.version.to_calver());
                 info!("new fw version: {}", firmware.version().to_calver());
+
+                if solo2.version > firmware.version() {
+                    println!("Firmware version on device higher than firmware version used.");
+                    println!("This would be rejected by the device.");
+                    return Err(anyhow!("Firmware rollback attempt"));
+                }
 
                 let fw_major = firmware.version().major;
                 let major_version_bump = fw_major > solo2.version.major;

@@ -57,7 +57,8 @@ Note that subcommands are inferred, so e.g. `solo2 b r` works like `solo2 bootlo
 
 ### Logging
 
-Uses [`pretty_env_logger`][pretty-env-logger]. For instance, set `SOLO2_LOG=info` in the environment.
+Uses [`pretty_env_logger`][pretty-env-logger], configured via `--verbose` flags.
+For instance, `-v` logs INFO and `-vv` logs `DEBUG` level logs.
 
 [pretty-env-logger]: https://docs.rs/pretty_env_logger/
 
