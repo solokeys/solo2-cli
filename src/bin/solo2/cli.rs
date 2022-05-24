@@ -41,7 +41,8 @@ pub struct GlobalOptions {
         global = true,
         help_heading = "SELECTION",
         long,
-        short,
+        // would conflict with OATH's algorithm flag
+        // short,
         conflicts_with = "uuid"
     )]
     pub all: bool,

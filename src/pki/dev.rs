@@ -84,16 +84,17 @@ pub fn generate_selfsigned_fido() -> ([u8; 16], [u8; 36], String, rcgen::Certifi
     // NB: for self-signed, rcgen does not follow this instruction
     tbs.use_authority_key_identifier_extension = true;
 
-    let mut extensions = Vec::new();
-    // AAGUID
-    // https://www.w3.org/TR/webauthn-2/#sctn-packed-attestation-cert-requirements
-    // id-fido-gen-ce-aaguid
-    // Not technically necessary, as we don't have "multiple models", just a new random key + cert.
-    extensions.push(rcgen::CustomExtension::from_oid_content(
-        // FIDO's PEN + 1.1.4
-        &[1, 3, 6, 1, 4, 1, 45724, 1, 1, 4],
-        yasna::construct_der(|writer| writer.write_bytes(aaguid.as_ref())),
-    ));
+    let extensions = vec![
+        // AAGUID
+        // https://www.w3.org/TR/webauthn-2/#sctn-packed-attestation-cert-requirements
+        // id-fido-gen-ce-aaguid
+        // Not technically necessary, as we don't have "multiple models", just a new random key + cert.
+        rcgen::CustomExtension::from_oid_content(
+            // FIDO's PEN + 1.1.4
+            &[1, 3, 6, 1, 4, 1, 45724, 1, 1, 4],
+            yasna::construct_der(|writer| writer.write_bytes(aaguid.as_ref())),
+        ),
+    ];
     // cf. the following, this is not necessary
     // https://groups.google.com/a/fidoalliance.org/g/fido-dev/c/pfuWJvM-OQQ
     // https://github.com/w3c/webauthn/issues/817

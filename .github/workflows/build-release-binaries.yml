@@ -72,7 +72,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --locked --target=${{ matrix.target }} ${{ matrix.cargo_flags }}
+          args: --release --locked --features dev-pki --target=${{ matrix.target }} ${{ matrix.cargo_flags }}
           use-cross: ${{ matrix.cross }}
 
       - name: Upload binary

@@ -170,6 +170,21 @@ pub struct Credential {
     pub digits: u8,
 }
 
+impl Credential {
+    pub fn default_totp(label: &str, secret32: &str) -> Result<Self> {
+        let secret = Secret::from_base32(&secret32.to_uppercase(), Digest::default())?;
+
+        Ok(Self {
+            label: label.to_string(),
+            issuer: None,
+            secret,
+            kind: Kind::Totp(Totp { period: 30 }),
+            algorithm: Digest::default(),
+            digits: 6,
+        })
+    }
+}
+
 // #[derive(Clone, Debug, PartialEq)]
 // pub struct CredentialId {
 //     pub label: String,
@@ -215,6 +230,21 @@ impl fmt::Display for Credential {
 pub struct Authenticate {
     pub label: String,
     pub timestamp: u64,
+}
+
+impl Authenticate {
+    pub fn with_label(label: &str) -> Authenticate {
+        use std::time::SystemTime;
+        Self {
+            label: label.to_string(),
+            timestamp: {
+                let since_epoch = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap();
+                since_epoch.as_secs()
+            },
+        }
+    }
 }
 
 pub enum Command {

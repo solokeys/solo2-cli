@@ -33,7 +33,7 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: cargo build --locked
+      - name: cargo build --locked --features dev-pki
         uses: actions-rs/cargo@v1
         with:
           command: build
@@ -42,7 +42,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features network-tests
+          args: --features dev-pki,network-tests
 
       - name: cargo fmt
         if: matrix.os == 'ubuntu-latest'
