@@ -2,7 +2,7 @@ This repository is incomplete and under active development.
 
 # 🐝 solo2 library and CLI
 
-The device can in one of two modes (USB VID:PID in brackets):
+The device can operate in one of two modes (USB VID:PID in brackets):
 - regular mode ([1209:BEEE][beee-pid])
 - bootloader mode ([1209:B000][b000-pid])
 
