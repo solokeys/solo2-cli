@@ -37,9 +37,9 @@ impl Transport for ctap::Device {
     }
 
     fn call_iso(&mut self, _: u8, _: u8, _: u8, _: u8, _: &[u8]) -> Result<Vec<u8>> {
-        return Err(anyhow::anyhow!(
+        Err(anyhow::anyhow!(
             "p1/p2 parameters not supported on this transport"
-        ));
+        ))
     }
 
     fn select(&mut self, _: Vec<u8>) -> Result<()> {
@@ -124,9 +124,9 @@ impl Transport for Solo2 {
         if let Some(device) = self.as_pcsc_mut() {
             device.call_iso(class, instruction, p1, p2, data)
         } else {
-            return Err(anyhow::anyhow!(
+            Err(anyhow::anyhow!(
                 "p1/p2 parameters not supported on this transport"
-            ));
+            ))
         }
     }
 

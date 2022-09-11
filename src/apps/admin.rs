@@ -76,7 +76,7 @@ impl App<'_> {
     pub fn locked(&mut self) -> Result<bool> {
         let locked = self.transport.instruct(Self::LOCKED_COMMAND)?;
         locked
-            .get(0)
+            .first()
             .map(|&locked| locked == 1)
             .ok_or_else(|| anyhow::anyhow!("response to locked status empty"))
     }
