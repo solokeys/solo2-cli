@@ -67,7 +67,7 @@ impl Solo2 {
         let mut lpc55 = Lpc55::having(uuid);
         while lpc55.is_err() {
             if now.elapsed().as_secs() > 15 {
-                return Err(anyhow!("User prompt to confirm maintenance timed out!"));
+                return Err(anyhow!("User prompt to confirm maintenance timed out (or udev rules for LPC 55 mode missing)!"));
             }
             std::thread::sleep(std::time::Duration::from_secs(1));
             lpc55 = Lpc55::having(uuid);
@@ -362,7 +362,18 @@ impl Device {
                 }
 
                 println!("Tap button on key to confirm, or replug to abort...");
-                Self::Solo2(solo2).into_lpc55()?
+                Self::Solo2(solo2).into_lpc55()
+                    .map_err(|e| {
+                        if std::env::consts::OS == "linux" {
+                            println!("\nIf you touched the key and the LED is off, you are likely missing udev rules for LPC 55 mode.");
+                            println!("Either run `sudo solo2 update`, or install <https://github.com/solokeys/solo2-cli/blob/main/70-solo2.rules>");
+                            println!("Specifically, you need this line:");
+                            // SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="b000", TAG+="uaccess"
+                            println!(r#"SUBSYSTEM=="hidraw", ATTRS{{idVendor}}=="1209", ATTRS{{idProduct}}=="b000", TAG+="uaccess"#);
+                            println!("");
+                        }
+                        e
+                    })?
             }
         };
 

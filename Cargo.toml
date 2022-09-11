@@ -1,6 +1,6 @@
 [package]
 name = "solo2"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["SoloKeys, built with Trussed®."]
 edition = "2021"
 rust-version = "1.60"
