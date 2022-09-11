@@ -2,20 +2,28 @@ This repository is incomplete and under active development.
 
 # 🐝 solo2 library and CLI
 
-The device can operate in one of two modes (USB VID:PID in brackets):
-- regular mode ([1209:BEEE][beee-pid])
-- bootloader mode ([1209:B000][b000-pid])
+The Solo 2 device can operate in one of two modes (USB VID:PID in brackets):
+- regular (Solo 2) mode ([1209:BEEE][beee-pid])
+- maintenance (LPC 55) mode ([1209:B000][b000-pid])
 
-In regular mode, only the CCID interface to apps is currently implemented.
-In bootloader mode, NXP's custom HID protocol is used (via [`lpc55-host`][lpc55-host]).
+In regular mode, the PCSC or CTAP interface is used opportunistically.  
+In maintenance mode, NXP's custom HID protocol is used (via [`lpc55-host`][lpc55-host]).
 
-Solo 2 is supported by Ludovic Rousseau's [CCID][solokeys-ccid] driver, but there has not been a release.
+On Linux, maintenance mode needs [udev rules][udev-rules].
+
+You can switch to LPC 55 mode using `solo2 app admin maintenance`  
+You can switch to Solo 2 mode using `solo2 bootloader reboot` (or by replugging the device).
+
+Solo 2 is supported by Ludovic Rousseau's [CCID][solokeys-ccid] driver since release 1.4.35 (July 25, 2021).  
+Unfortunately, Debian and macOS have not updated yet.
+
 The included [Info.plist](Info.plist) works.
 
 [beee-pid]: https://pid.codes/1209/BEEE/
 [b000-pid]: https://pid.codes/1209/B000/
 [lpc55-host]: https://docs.rs/lpc55
 [solokeys-ccid]: https://ccid.apdu.fr/ccid/shouldwork.html#0x12090xBEEE
+[udev-rules]: https://github.com/solokeys/solo2-cli/blob/main/70-solo2.rules
 
 ### ⚠ DANGER ⚠
 
@@ -44,12 +52,12 @@ the goal is only to enable developing and testing all functionality of all offic
 
 If the key is in regular mode, and its firmware contains the admin app:
 - `solo2 app admin uuid` reads out the serial number.
-- `solo2 app admin boot-to-bootrom` switches to bootloader mode.
+- `solo2 app admin maintenance` switches to bootloader mode.
 
 If the key is in regular mode, and its firmware contains the NDEF app:
 - `solo2 app ndef capabilities` reads out the NDEF capabilities.
 
-If the key is in bootloader mode:
+If the key is in maintenance mode:
 - `solo2 bootloader reboot` switches to regular mode (if the firmware is valid).
 
 Note that subcommands are inferred, so e.g. `solo2 b r` works like `solo2 bootloader reboot`.
