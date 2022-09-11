@@ -2,14 +2,16 @@ use clap::{self, crate_authors, crate_version, ArgEnum, Args, Parser, Subcommand
 
 /// CLI to update and use Solo 2 security keys.
 ///
-/// Print more logs by setting env SOLO2_LOG='info' or SOLO2_LOG='debug'.
+/// Print more logs by adding `-v` or `-vv`.
 ///
 /// Project homepage: <https://github.com/solokeys/solo2-cli>
+///
 /// Trussed homepage: <https://trussed.dev>
-///
-/// Design: [Rain's Rust CLI recommendations][cli-recommendations] is a good read.
-///
-/// [cli-recommendations]: https://rust-cli-recommendations.sunshowers.io/
+
+//
+// Design: [Rain's Rust CLI recommendations][cli-recommendations] is a good read.
+//
+// [cli-recommendations]: https://rust-cli-recommendations.sunshowers.io/
 
 #[derive(Parser)]
 #[clap(infer_subcommands = true)]
