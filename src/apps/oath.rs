@@ -1,4 +1,4 @@
-use core::fmt;
+use core::fmt::{self, Write as _};
 
 use anyhow::anyhow;
 use flexiber::{Decodable, Encodable, TaggedSlice};
@@ -17,12 +17,12 @@ impl<'t> crate::Select<'t> for App<'t> {
     // }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Default, PartialEq)]
 pub struct Hotp {
     pub initial_counter: u32,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Totp {
     pub period: u32,
 }
@@ -33,7 +33,7 @@ impl Default for Totp {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum Kind {
     Hotp(Hotp),
     Totp(Totp),
@@ -57,7 +57,7 @@ impl fmt::Debug for Kind {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u8)]
 pub enum Digest {
     Sha1 = 0x1,
@@ -81,7 +81,7 @@ impl Default for Digest {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct Secret(Vec<u8>);
 
 impl fmt::Debug for Secret {
@@ -158,7 +158,7 @@ impl Secret {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Credential {
     // add device UUID/serial?
     // pub uuid: [u8; 16],
@@ -196,11 +196,11 @@ impl Credential {
         let mut id = String::new();
         if let Kind::Totp(totp) = self.kind {
             if totp != Default::default() {
-                id += &format!("{}/", totp.period);
+                write!(id, "{}/", totp.period).ok();
             }
         }
         if let Some(issuer) = &self.issuer {
-            id += &format!("{}:", issuer);
+            write!(id,"{}:", issuer).ok();
         }
         id += &self.label;
         id
@@ -256,7 +256,7 @@ pub enum Command {
     Reset,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u8)]
 pub enum Tag {
     CredentialId = 0x71,
@@ -292,7 +292,7 @@ impl flexiber::TagLike for Tag {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u8)]
 pub enum Instruction {
     Put = 0x1,

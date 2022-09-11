@@ -370,7 +370,7 @@ impl Device {
                             println!("Specifically, you need this line:");
                             // SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="b000", TAG+="uaccess"
                             println!(r#"SUBSYSTEM=="hidraw", ATTRS{{idVendor}}=="1209", ATTRS{{idProduct}}=="b000", TAG+="uaccess"#);
-                            println!("");
+                            println!();
                         }
                         e
                     })?

@@ -74,6 +74,8 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
                                 app.reboot()?;
                             }
                             Maintenance => {
+                                // TODO: figure out the correct solution
+                                #[allow(clippy::drop_non_drop)]
                                 drop(app);
                                 println!("Tap button on key to reboot into bootloader/maintenance mode, or replug to abort...");
                                 solo2.into_lpc55()?;
