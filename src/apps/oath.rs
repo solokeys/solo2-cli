@@ -200,7 +200,7 @@ impl Credential {
             }
         }
         if let Some(issuer) = &self.issuer {
-            write!(id,"{}:", issuer).ok();
+            write!(id, "{}:", issuer).ok();
         }
         id += &self.label;
         id
