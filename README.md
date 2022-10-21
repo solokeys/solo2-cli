@@ -39,6 +39,8 @@ We recommend using NXP's [development board][dev-board] instead.
 [dev-board]: https://www.nxp.com/design/development-boards/lpcxpresso-boards/lpcxpresso55s69-development-board:LPC55S69-EVK
 
 ### Installation
+[![Packaging status](https://repology.org/badge/vertical-allrepos/solo2-cli.svg)](https://repology.org/project/solo2-cli/versions)
+
 
 ```
 cargo install solo2
