@@ -63,9 +63,9 @@ pub fn generate_selfsigned_fido() -> ([u8; 16], [u8; 36], String, rcgen::Certifi
     tbs.alg = alg;
     tbs.serial_number = Some(OsRng.next_u64());
 
-    let now = chrono::Utc::now();
+    let now = time::OffsetDateTime::now_utc();
     tbs.not_before = now;
-    tbs.not_after = now + chrono::Duration::days(50 * 365);
+    tbs.not_after = now + time::Duration::days(50 * 365);
 
     // https://www.w3.org/TR/webauthn-2/#sctn-packed-attestation-cert-requirements
     let mut subject = rcgen::DistinguishedName::new();
@@ -79,7 +79,7 @@ pub fn generate_selfsigned_fido() -> ([u8; 16], [u8; 36], String, rcgen::Certifi
     tbs.distinguished_name = subject;
 
     tbs.key_pair = Some(keypair);
-    tbs.is_ca = rcgen::IsCa::SelfSignedOnly;
+    tbs.is_ca = rcgen::IsCa::NoCa;
     // TODO: check if `authorityKeyIdentifier=keyid,issuer` is both needed
     // NB: for self-signed, rcgen does not follow this instruction
     tbs.use_authority_key_identifier_extension = true;

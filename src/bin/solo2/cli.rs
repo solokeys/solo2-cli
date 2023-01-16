@@ -1,4 +1,4 @@
-use clap::{self, crate_authors, crate_version, ArgEnum, Args, Parser, Subcommand};
+use clap::{self, crate_authors, crate_version, Args, Parser, Subcommand, ValueEnum};
 
 /// CLI to update and use Solo 2 security keys.
 ///
@@ -50,10 +50,8 @@ pub struct GlobalOptions {
     pub all: bool,
 
     /// Verbosity level (can be specified multiple times)
-    ///
-    /// Unused so far; TODO: switch over from `pretty_env_logger` to using this.
-    #[clap(long, short, global = true, parse(from_occurrences))]
-    pub verbose: usize,
+    #[clap(flatten)]
+    pub verbose: clap_verbosity_flag::Verbosity<clap_verbosity_flag::WarnLevel>,
 }
 
 #[derive(Subcommand)]
@@ -256,9 +254,9 @@ pub struct OathRegister {
     #[clap(long, short)]
     pub issuer: Option<String>,
 
-    #[clap(arg_enum, default_value = "sha1", long, short)]
+    #[clap(default_value = "sha1", long, short, value_enum)]
     pub algorithm: OathAlgorithm,
-    #[clap(arg_enum, default_value = "totp", long, short)]
+    #[clap(default_value = "totp", long, short, value_enum)]
     pub kind: OathKind,
 
     /// (only HOTP) initial counter to use for HOTPs
@@ -266,7 +264,9 @@ pub struct OathRegister {
     pub counter: u32,
 
     /// number of digits to output
-    #[clap(default_value = "6", possible_values=["6", "7", "8"], long, short)]
+    // #[clap(default_value = "6", possible_values=["6", "7", "8"], long, short)]
+    // TODO: figure out how to put this check back in
+    #[clap(long, short)]
     pub digits: u8,
 
     /// (only TOTP) period in seconds for which a TOTP is valid
@@ -275,7 +275,7 @@ pub struct OathRegister {
 }
 
 // ignore case?
-#[derive(ArgEnum, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 /// hash algorithm to use in OTP generation
 pub enum OathAlgorithm {
     Sha1,
@@ -283,7 +283,7 @@ pub enum OathAlgorithm {
 }
 
 // ignore case?
-#[derive(ArgEnum, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 /// kind of OATH credential to register
 pub enum OathKind {
     Hotp,
