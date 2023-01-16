@@ -26,8 +26,12 @@ impl Firmware {
     // pub fn verify(&self) -> Result<()> {
     // }
 
-    pub fn write_to(&self, bootloader: &lpc55::Bootloader) {
-        bootloader.receive_sb_file(&self.content);
+    pub fn write_to<'a>(
+        &self,
+        bootloader: &lpc55::Bootloader,
+        progress: Option<&'a dyn Fn(usize)>,
+    ) {
+        bootloader.receive_sb_file(&self.content, progress);
     }
 
     /// This is not the best we can do; should instead verify the Firmware data is valid, and the signatures verify against [`R1`][crate::pki::Authority::R1].
@@ -59,5 +63,13 @@ impl Firmware {
     pub fn download_latest() -> Result<Self> {
         let specs = github::Release::fetch_spec()?;
         specs.fetch_firmware()
+    }
+
+    pub fn len(&self) -> usize {
+        self.content.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }

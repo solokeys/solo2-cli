@@ -126,7 +126,7 @@ pub struct Certificate {
 
 impl Certificate {
     pub fn try_from_der(der: &[u8]) -> Result<Self> {
-        use x509_parser::traits::FromDer;
+        use x509_parser::prelude::FromDer;
         X509Certificate::from_der(der)?;
         Ok(Self { der: der.to_vec() })
     }
@@ -136,7 +136,7 @@ impl Certificate {
     }
 
     pub fn certificate(&self) -> X509Certificate<'_> {
-        use x509_parser::traits::FromDer;
+        use x509_parser::prelude::FromDer;
         X509Certificate::from_der(&self.der).unwrap().1
     }
 }
