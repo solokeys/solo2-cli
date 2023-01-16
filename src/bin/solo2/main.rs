@@ -12,15 +12,8 @@ fn main() {
     use clap::Parser;
     let args = cli::Cli::parse();
 
-    use log::LevelFilter::*;
-    let level = match args.global_options.verbose {
-        0 => Warn,
-        1 => Info,
-        2 => Debug,
-        _ => Trace,
-    };
     pretty_env_logger::formatted_builder()
-        .filter(None, level)
+        .filter(None, args.global_options.verbose.log_level_filter())
         .init();
 
     if let Err(err) = try_main(args) {
@@ -159,6 +152,9 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
                             Register(args) => {
                                 use solo2::apps::oath;
 
+                                if args.digits < 6 || args.digits > 8 {
+                                    return Err(anyhow::anyhow!("Invalid number of OATH digits"));
+                                }
                                 use cli::OathAlgorithm;
                                 let digest = match args.algorithm {
                                     OathAlgorithm::Sha1 => oath::Digest::Sha1,

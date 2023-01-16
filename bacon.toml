@@ -13,6 +13,10 @@ need_stdout = false
 command = ["cargo", "check", "--features", "cli", "--bin", "solo2", "--color", "always"]
 need_stdout = false
 
+[jobs.dev-pki]
+command = ["cargo", "check", "--features", "dev-pki", "--bin", "solo2", "--color", "always"]
+need_stdout = false
+
 [jobs.ctap-list]
 command = ["cargo", "build", "--example", "list-ctap", "--color", "always"]
 need_stdout = false
