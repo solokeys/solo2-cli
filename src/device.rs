@@ -82,7 +82,7 @@ impl fmt::Debug for Solo2 {
         write!(
             f,
             "Solo 2 {:X} (CTAP: {:?}, PCSC: {:?}, Version: {} aka {})",
-            &self.uuid.to_simple(),
+            &self.uuid.simple(),
             &self.ctap,
             &self.pcsc,
             &self.version.to_semver(),
@@ -107,7 +107,7 @@ impl fmt::Display for Solo2 {
         write!(
             f,
             "Solo 2 {:X} ({}, firmware {}{})",
-            &self.uuid.to_simple(),
+            &self.uuid.simple(),
             transports,
             &self.version().to_calver(),
             lock_status,
@@ -244,7 +244,7 @@ impl fmt::Display for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Device::*;
         match self {
-            Lpc55(lpc55) => write!(f, "LPC 55 {:X}", Uuid::from_u128(lpc55.uuid).to_simple()),
+            Lpc55(lpc55) => write!(f, "LPC 55 {:X}", Uuid::from_u128(lpc55.uuid).simple()),
             Solo2(solo2) => solo2.fmt(f),
         }
     }
@@ -268,12 +268,12 @@ impl UuidSelectable for Device {
             .filter(|card| card.uuid() == uuid)
             .collect();
         match candidates.len() {
-            0 => Err(anyhow!("No usable device has UUID {:X}", uuid.to_simple())),
+            0 => Err(anyhow!("No usable device has UUID {:X}", uuid.simple())),
             1 => Ok(candidates.remove(0)),
             n => Err(anyhow!(
                 "Multiple ({}) devices have UUID {:X}",
                 n,
-                uuid.to_simple()
+                uuid.simple()
             )),
         }
     }
@@ -317,7 +317,12 @@ impl Device {
         }
     }
 
-    pub fn program(self, firmware: Firmware, skip_major_prompt: bool) -> Result<()> {
+    pub fn program(
+        self,
+        firmware: Firmware,
+        skip_major_prompt: bool,
+        progress: Option<&dyn Fn(usize)>,
+    ) -> Result<()> {
         // If device is in Solo2 mode
         // - if firmware is major version bump, confirm with dialogue
         // - prompt user tap and get into bootloader
@@ -379,7 +384,7 @@ impl Device {
 
         println!("LPC55 Bootloader detected. The LED should be off.");
         println!("Writing new firmware...");
-        firmware.write_to(&lpc55);
+        firmware.write_to(&lpc55, progress);
 
         println!("Done. Rebooting key. The LED should turn back on.");
         Self::Lpc55(lpc55).into_solo2().map(drop)

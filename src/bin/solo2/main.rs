@@ -82,7 +82,7 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
                             }
                             Uuid => {
                                 let uuid = app.uuid()?;
-                                println!("{:X}", uuid.to_simple());
+                                println!("{:X}", uuid.simple());
                             }
                             Version => {
                                 let version = app.version()?;
@@ -334,7 +334,7 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
                 },
                 cli::Pki::Web => {
                     let solo2: Solo2 = unwrap_or_interactively_select(uuid, "Solo 2")?;
-                    let uuid = solo2.uuid().to_simple();
+                    let uuid = solo2.uuid().simple();
                     let url = format!("https://s2pki.net/s2/{uuid}/x255.txt");
                     println!("=> {}", url);
                     webbrowser::open(&url)?;
@@ -401,7 +401,9 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
 
             if all {
                 for device in Device::list() {
-                    device.program(firmware.clone(), yes)?;
+                    let bar = indicatif::ProgressBar::new(firmware.len() as u64);
+                    let progress = |bytes: usize| bar.set_position(bytes as u64);
+                    device.program(firmware.clone(), yes, Some(&progress))?;
                 }
                 return Ok(());
             } else {
@@ -409,7 +411,9 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
                     Some(uuid) => Device::having(uuid)?,
                     None => interactively_select(Device::list(), "Solo 2 devices")?,
                 };
-                return device.program(firmware, yes);
+                let bar = indicatif::ProgressBar::new(firmware.len() as u64);
+                let progress = |bytes: usize| bar.set_position(bytes as u64);
+                return device.program(firmware, yes, Some(&progress));
             }
         }
     }
