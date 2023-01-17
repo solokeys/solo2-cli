@@ -58,8 +58,6 @@ pub struct GlobalOptions {
 pub enum Subcommands {
     #[clap(subcommand)]
     App(Apps),
-    #[clap(subcommand)]
-    Pki(Pki),
 
     #[clap(subcommand)]
     Bootloader(Bootloader),
@@ -70,6 +68,9 @@ pub enum Subcommands {
     /// List all available devices
     #[clap(visible_alias = "ls")]
     List,
+
+    #[clap(subcommand)]
+    Pki(Pki),
 
     /// Update to latest firmware published by SoloKeys. Warns on Major updates.
     Update {
@@ -91,8 +92,6 @@ pub enum Subcommands {
 #[derive(Subcommand)]
 /// Interact with bootloader
 pub enum Bootloader {
-    /// Reboots (into device if firmware is valid)
-    Reboot,
     /// List all available bootloaders
     #[clap(visible_alias = "ls")]
     List,
@@ -104,6 +103,8 @@ pub enum Bootloader {
     //     /// Configuration file containing settings
     //     config: String,
     // },
+    /// Reboots (into device if firmware is valid)
+    Reboot,
 }
 
 #[derive(Subcommand)]
@@ -178,14 +179,14 @@ pub enum Apps {
 pub enum Admin {
     /// Print the application's AID
     Aid,
-    /// Reboot device (as Solo 2)
-    #[clap(alias = "reboot")]
-    Restart,
+    /// Is device locked? (not available in early firmware)
+    Locked,
     /// Switch device to maintenance mode (reboot into LPC 55 bootloader)
     #[clap(alias = "boot-to-bootrom")]
     Maintenance,
-    /// Is device locked? (not available in early firmware)
-    Locked,
+    /// Reboot device (as Solo 2)
+    #[clap(alias = "reboot")]
+    Restart,
     /// Return device UUID (not available over CTAP in early firmware)
     Uuid,
     /// Return device firmware version
@@ -222,8 +223,6 @@ pub enum Ndef {
 pub enum Oath {
     /// Print the application's AID
     Aid,
-    /// Register new credential
-    Register(OathRegister),
     // Authenticate,
     /// Delete existing credential
     Delete {
@@ -232,6 +231,8 @@ pub enum Oath {
     },
     /// List all credentials
     List,
+    /// Register new credential
+    Register(OathRegister),
     /// Reset OATH app, deleting all credentials
     Reset,
     /// Calculate TOTP for a registered credential
