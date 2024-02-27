@@ -374,7 +374,7 @@ impl Device {
                             println!("Either run `sudo solo2 update`, or install <https://github.com/solokeys/solo2-cli/blob/main/70-solo2.rules>");
                             println!("Specifically, you need this line:");
                             // SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="b000", TAG+="uaccess"
-                            println!(r#"SUBSYSTEM=="hidraw", ATTRS{{idVendor}}=="1209", ATTRS{{idProduct}}=="b000", TAG+="uaccess"#);
+                            println!(r#"SUBSYSTEM=="hidraw", ATTRS{{idVendor}}=="1209", ATTRS{{idProduct}}=="b000", TAG+="uaccess""#);
                             println!();
                         }
                         e
