@@ -44,7 +44,7 @@ pub fn generate_selfsigned_fido() -> ([u8; 16], [u8; 36], String, rcgen::Certifi
     let key_pkcs8 = keypair.serialize_der();
     let key_pem = keypair.serialize_pem();
 
-    let key_info: p256::pkcs8::PrivateKeyInfo = key_pkcs8.as_slice().try_into().unwrap();
+    let key_info: pkcs8::PrivateKeyInfo = key_pkcs8.as_slice().try_into().unwrap();
     let secret_key: [u8; 32] = p256::SecretKey::try_from(key_info)
         .unwrap()
         .to_be_bytes()
