@@ -186,7 +186,7 @@ impl Channel {
 }
 
 impl Device {
-    pub fn call(&self, channel: Channel, request: Command) -> Result<Vec<u8>> {
+    pub fn call(&self, channel: Channel, request: &Command) -> Result<Vec<u8>> {
         let result: Result<Vec<()>> = request
             .packets(channel)
             .enumerate()
@@ -260,7 +260,7 @@ impl Device {
         getrandom::getrandom(&mut nonce).unwrap();
         // dbg!(hex::encode(&nonce));
         let command = Command::new(Code::Init).with_data(&nonce);
-        let response = self.call(Channel::BROADCAST, command)?;
+        let response = self.call(Channel::BROADCAST, &command)?;
         // let mut packet = [0u8; 64];
         // let read = self.device.read(&mut packet)?;
         assert_eq!(response.len(), 17);
@@ -286,7 +286,7 @@ impl Device {
 
     pub fn ping(&self, channel: Channel, data: &[u8]) -> Result<Vec<u8>> {
         let command = Command::new(Code::Ping).with_data(data);
-        let response = self.call(channel, command)?;
+        let response = self.call(channel, &command)?;
 
         assert_eq!(data, response);
         Ok(response)
@@ -294,7 +294,7 @@ impl Device {
 
     pub fn wink(&self, channel: Channel) -> Result<Vec<u8>> {
         let command = Command::new(Code::Wink);
-        let response = self.call(channel, command)?;
+        let response = self.call(channel, &command)?;
         Ok(response)
     }
 }

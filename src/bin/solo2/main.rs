@@ -179,7 +179,7 @@ fn try_main(args: cli::Cli) -> anyhow::Result<()> {
                                     algorithm: digest,
                                     digits: args.digits,
                                 };
-                                let credential_id = app.register(credential)?;
+                                let credential_id = app.register(&credential)?;
                                 println!("{}", credential_id);
                                 Ok(())
                             }

@@ -123,22 +123,22 @@ impl UuidSelectable for Solo2 {
     fn list() -> Vec<Self> {
         // iterator/lifetime woes avoiding the explicit for loop
         let mut ctaps = BTreeMap::new();
-        for mut device in ctap::list().into_iter() {
+        for mut device in ctap::list() {
             if let Ok(uuid) = device.try_uuid() {
                 ctaps.insert(uuid, device);
             }
         }
         // iterator/lifetime woes avoiding the explicit for loop
         let mut pcscs = BTreeMap::new();
-        for mut device in pcsc::list().into_iter() {
+        for mut device in pcsc::list() {
             if let Ok(uuid) = device.try_uuid() {
                 pcscs.insert(uuid, device);
             }
         }
 
-        let uuids = BTreeSet::from_iter(ctaps.keys().chain(pcscs.keys()).copied());
+        let uuids: BTreeSet<Uuid> = ctaps.keys().chain(pcscs.keys()).copied().collect();
         let mut devices = Vec::new();
-        for uuid in uuids.iter() {
+        for uuid in &uuids {
             // a bit roundabout, but hey, "it works".
             let mut device = Self {
                 ctap: ctaps.remove(uuid),
