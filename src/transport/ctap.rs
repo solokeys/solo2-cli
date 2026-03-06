@@ -87,6 +87,7 @@ impl From<u8> for Code {
             0x3F => Error,
             0x3B => Keepalive,
             vendor_code @ 0x40..=0x7F => Vendor(VendorCode::new(vendor_code)),
+            0xA4 | 0xA1 => panic!("dependency CCID is not satisfied"),
             _ => panic!(),
         }
     }
