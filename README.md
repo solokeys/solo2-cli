@@ -1,3 +1,7 @@
+**The `solo2` cli is maintained in the https://github.com/solokeys/solo2 monorepo.**
+
+---
+
 This repository is incomplete and under active development.
 
 # 🐝 solo2 library and CLI
