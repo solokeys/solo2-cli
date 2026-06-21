@@ -189,8 +189,7 @@ impl Device {
     pub fn call(&self, channel: Channel, request: Command) -> Result<Vec<u8>> {
         let result: Result<Vec<()>> = request
             .packets(channel)
-            .enumerate()
-            .map(|(_i, packet)| {
+            .map(|packet| {
                 // need to prefix report ID
                 let mut prefixed = vec![0];
                 prefixed.extend_from_slice(&packet);

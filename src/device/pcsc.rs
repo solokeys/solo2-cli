@@ -134,7 +134,7 @@ impl Device {
                 }
                 attribute
             })
-            .unwrap_or_else(|| "".to_string())
+            .unwrap_or_default()
     }
 }
 
