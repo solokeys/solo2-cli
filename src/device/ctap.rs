@@ -43,9 +43,7 @@ pub struct Device {
 }
 
 pub fn list() -> Vec<Device> {
-    Session::new()
-        .map(|session| session.devices())
-        .unwrap_or_else(|_| vec![])
+    Session::new().map_or_else(|_| vec![], |session| session.devices())
 }
 
 impl From<hidapi::DeviceInfo> for Info {

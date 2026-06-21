@@ -26,11 +26,7 @@ impl Firmware {
     // pub fn verify(&self) -> Result<()> {
     // }
 
-    pub fn write_to<'a>(
-        &self,
-        bootloader: &lpc55::Bootloader,
-        progress: Option<&'a dyn Fn(usize)>,
-    ) {
+    pub fn write_to(&self, bootloader: &lpc55::Bootloader, progress: Option<&dyn Fn(usize)>) {
         bootloader.receive_sb_file(&self.content, progress);
     }
 

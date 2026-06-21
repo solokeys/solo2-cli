@@ -195,7 +195,7 @@ impl Credential {
     pub fn id(&self) -> String {
         let mut id = String::new();
         if let Kind::Totp(totp) = self.kind {
-            if totp != Default::default() {
+            if totp != Totp::default() {
                 write!(id, "{}/", totp.period).ok();
             }
         }
@@ -325,7 +325,7 @@ impl Decodable<'_> for Tag {
 
 impl App<'_> {
     /// Returns the credential ID.
-    pub fn register(&mut self, credential: Credential) -> Result<String> {
+    pub fn register(&mut self, credential: &Credential) -> Result<String> {
         info!(" registering credential {:?}", &credential);
         // data = Tlv(TAG_NAME, cred_id) + Tlv(
         //     TAG_KEY,
@@ -409,7 +409,7 @@ impl App<'_> {
         assert_eq!(response[1], 5);
         let digits = response[2] as usize;
         let truncated_code = u32::from_be_bytes(response[3..].try_into().unwrap());
-        let code = (truncated_code & 0x7FFFFFFF) % 10u32.pow(digits as _);
+        let code = (truncated_code & 0x7FFF_FFFF) % 10u32.pow(digits as _);
         Ok(format!("{:0digits$}", code, digits = digits))
     }
 

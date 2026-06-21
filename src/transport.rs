@@ -33,7 +33,7 @@ impl Transport for ctap::Device {
         use ctap::{Code, Command};
         let init = self.init()?;
         let command = Command::new(Code::from(instruction)).with_data(data);
-        ctap::Device::call(self, init.channel, command)
+        ctap::Device::call(self, init.channel, &command)
     }
 
     fn call_iso(&mut self, _: u8, _: u8, _: u8, _: u8, _: &[u8]) -> Result<Vec<u8>> {
